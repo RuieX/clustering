@@ -1,10 +1,5 @@
 # Assignment 3: Clustering
 
-[OpenTripPlanner (OTP)](http://docs.opentripplanner.org/en/latest/)
-_.gtfs_
-
-1. d
-
 Perform classification of the  [MNIST database](http://yann.lecun.com/exdb/mnist/) (or a sufficiently small subset of it) using:
 
 * mixture of Gaussians with diagonal covariance (Gaussian Naive Bayes with latent class label);
