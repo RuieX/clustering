@@ -15,11 +15,15 @@ while for mean shift **vary the kernel width**.
 _For each_ value of k (or kernel width) _provide the value of the Rand index_:
 
 R=2(a+b)/(n(n-1))
+$$
+R=2\frac{a+b}{n(n-1)}
+$$
 
 where
-* n is the number of images in the dataset.
-* a is the number of pairs of images that represent the same digit and that are clustered together.
-* b is the number of pairs of images that represent different digits and that are placed in different clusters.
+* $n$ is the number of images in the dataset.
+* $a$ is the number of pairs of images that represent the same digit and that are clustered together.
+* $b$ is the number of pairs of images that represent different digits and that are placed in different clusters.
+
 Explain the differences between the three models.
 
 **Tip**: 
