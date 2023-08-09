@@ -5,6 +5,8 @@ import joblib
 from loguru import logger
 from sklearn.model_selection import GridSearchCV
 
+# todo idk if needed
+
 
 def model_selector(estimator, properties, scoring, cv, verbose, jobs, x_train, y_train):
     """
@@ -35,9 +37,9 @@ def save_model(model, model_name):
     :param model_name:
     :return:
     """
-    if not os.path.exists('../tuned_models'):
-        os.mkdir('../tuned_models')
-    joblib.dump(model, f'../tuned_models/{model_name}.pkl')
+    if not os.path.exists('../models'):
+        os.mkdir('../models')
+    joblib.dump(model, f'../models/{model_name}.pkl')
 
 
 def load_model(model_name):
@@ -46,4 +48,4 @@ def load_model(model_name):
     :param model_name:
     :return:
     """
-    return joblib.load(f"../tuned_models/{model_name}.pkl")
+    return joblib.load(f"../models/{model_name}.pkl")
