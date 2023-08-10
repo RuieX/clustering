@@ -3,6 +3,7 @@ import numpy as np
 import pandas as pd
 
 # todo not needed in this assignment
+# todo idk if needed (file from asgmt 2?)
 
 
 class TrainTestSplit:

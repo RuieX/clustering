@@ -8,6 +8,7 @@ import seaborn as sns
 from sklearn.metrics import accuracy_score, confusion_matrix, ConfusionMatrixDisplay
 
 
+# todo idk if needed (file from asgmt 2?)
 class Evaluation:
     def __init__(self, y_true: pd.DataFrame, y_pred: pd.DataFrame):
         self.y_pred = y_pred

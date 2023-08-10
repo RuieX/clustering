@@ -5,7 +5,7 @@ import joblib
 from loguru import logger
 from sklearn.model_selection import GridSearchCV
 
-# todo idk if needed
+# todo idk if needed (file from asgmt 2?)
 
 
 def model_selector(estimator, properties, scoring, cv, verbose, jobs, x_train, y_train):
