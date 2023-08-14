@@ -4,7 +4,7 @@ import pandas as pd
 from os import path
 from sklearn.datasets import fetch_openml
 
-from src.models.model import Dataset
+from src.models.dataset import Dataset
 from src.utilities.utils import get_dataset_dir
 from src.utilities.settings import DATA, LABELS, LABELS_SMALL, DATA_SMALL
 
