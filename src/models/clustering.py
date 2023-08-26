@@ -65,7 +65,7 @@ class ClusteringModelEvaluation(ABC):
         best_score_glb = -1  # initialize with the lowest rand scores
         for n in tqdm(self._n_components, desc=''):
             tqdm.write(f'Processing number of components: {n}')
-            data_d = self.data.make_pca(n_comps=n).rescale()
+            data_pca = self.data.make_pca(n_comps=n).rescale()
             best_score_lcl = -1
             hyperparameters = {}
 
@@ -73,11 +73,11 @@ class ClusteringModelEvaluation(ABC):
                 tqdm.write(f'Processing {hyperparam_name} value: {k}')
                 model = model.set_params(**{hyperparam_name: k})
                 t1 = time.perf_counter()
-                model.fit(data_d)
+                model.fit(data_pca)
                 t2 = time.perf_counter()
                 elapsed = t2 - t1
 
-                score = rand_score(self.data.y, model.labels_)
+                score = rand_score(data_pca.y, model.labels_)
                 results = {
                     'score': score,
                     'n_clusters': model.n_clusters,
