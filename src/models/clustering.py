@@ -120,7 +120,7 @@ class ClusteringModelEvaluation(ABC):
             os.mkdir(get_results_dir())
 
         result_name = os.path.join(get_results_dir(), f"{model_name}_{hyperparam_name}_result.json")
-        result_bestmod_name = os.path.join(get_results_dir(), f"{model_name}_{hyperparam_name}_result_bestmodels.json")
+        result_bestmod_name = os.path.join(get_results_dir(), f"{model_name}_{hyperparam_name}_result_bestmodels.pkl")
         bestmod_name = os.path.join(get_results_dir(), f"{model_name}_{hyperparam_name}_bestmodel.pkl")
 
         print(f"Saving {result_name}")
@@ -128,8 +128,8 @@ class ClusteringModelEvaluation(ABC):
             json.dump(self.results(), file)
 
         print(f"Saving {result_bestmod_name}")
-        with open(result_bestmod_name, 'w') as fl:
-            json.dump(self.results_bestmodels(), fl)
+        with open(result_bestmod_name, 'wb') as fl:
+            pickle.dump(self.results_bestmodels(), fl)
 
         print(f"Saving {bestmod_name}")
         with open(bestmod_name, 'wb') as f:
@@ -245,7 +245,7 @@ def load_results(model_name: str, hyperparam_name: str) -> (
     """
     # Specify the path to your JSON file
     result_name = os.path.join(get_results_dir(), f"{model_name}_{hyperparam_name}_result.json")
-    result_bestmod_name = os.path.join(get_results_dir(), f"{model_name}_{hyperparam_name}_result_bestmodels.json")
+    result_bestmod_name = os.path.join(get_results_dir(), f"{model_name}_{hyperparam_name}_result_bestmodels.pkl")
     bestmod_name = os.path.join(get_results_dir(), f"{model_name}_{hyperparam_name}_bestmodel.pkl")
 
     # Open the JSON file in read mode
@@ -254,8 +254,8 @@ def load_results(model_name: str, hyperparam_name: str) -> (
         result = json.load(file)
 
     print(f"Loading {result_bestmod_name}")
-    with open(result_bestmod_name, 'r') as fl:
-        result_bestmodel = json.load(fl)
+    with open(result_bestmod_name, 'rb') as fl:
+        result_bestmodel = pickle.load(fl)
 
     print(f"Loading {bestmod_name}")
     with open(bestmod_name, 'rb') as f:
