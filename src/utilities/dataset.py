@@ -23,7 +23,7 @@ def download_data() -> Dataset:
     return Dataset(x=X, y=y)
 
 
-def store_data(data: Dataset, reduced: bool = False):
+def save_data(data: Dataset, reduced: bool = False):
     """
     Store given dataset
     :param data: dataset
@@ -31,11 +31,11 @@ def store_data(data: Dataset, reduced: bool = False):
                     if true, store the original dataset with its specific name
                     if false, store the reduced dataset with its specific name
     """
-    print("Storing MNIST. ")
+    print("Saving MNIST. ")
     if not reduced:
-        data.store(x_name=DATA, y_name=LABELS)
+        data.save(x_name=DATA, y_name=LABELS)
     else:
-        data.store(x_name=DATA_SMALL, y_name=LABELS_SMALL)
+        data.save(x_name=DATA_SMALL, y_name=LABELS_SMALL)
 
 
 def load_data(reduced: bool = False) -> Dataset:
@@ -55,10 +55,10 @@ def load_data(reduced: bool = False) -> Dataset:
     x_file = path.join(get_dataset_dir(), f"{x_name}.csv")
     y_file = path.join(get_dataset_dir(), f"{y_name}.csv")
 
-    print(f"Loading {x_file} ")
+    print(f"Loading {x_file}")
     X = pd.read_csv(x_file)
 
-    print(f"Loading {y_file} ")
+    print(f"Loading {y_file}")
     y = pd.read_csv(y_file).values.ravel()
 
     return Dataset(x=X, y=y)

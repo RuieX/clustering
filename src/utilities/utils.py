@@ -1,6 +1,6 @@
 import os
 from os import path
-from src.utilities.settings import DATASETS, IMAGES
+from src.utilities.settings import DATASETS, IMAGES, RESULTS
 
 
 def get_root_dir() -> str:
@@ -15,6 +15,13 @@ def get_dataset_dir() -> str:
     :return: path to dataset directory
     """
     return path.join(get_root_dir(), DATASETS)
+
+
+def get_results_dir() -> str:
+    """
+    :return: path to dataset directory
+    """
+    return path.join(get_root_dir(), RESULTS)
 
 
 def get_images_dir() -> str:  #todo not needed anyomre?
@@ -43,6 +50,7 @@ def has_files_in_dir(dir_path):
 #
 #     tfidf_results_path = os.path.join(tfidf_dir, "tfidf_docs.pkl")
 #
+#instead of
 #     try:
 #         os.makedirs(path_)
 #         print(f"Created directory {path_} ")

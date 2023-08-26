@@ -14,7 +14,7 @@ the _extracted clusters_ as the number of **clusters k varies from 5 to 15**, fo
 while for mean shift **vary the kernel width**. 
 _For each_ value of k (or kernel width) _provide the value of the Rand index_:
 
-R=2(a+b)/(n(n-1))
+R=(2*(a+b))/(n*(n-1))
 $$
 R=2\frac{a+b}{n(n-1)}
 $$
