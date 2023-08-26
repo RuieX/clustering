@@ -45,7 +45,8 @@ class ClusteringModelEvaluation(ABC):
 
         self._evaluated: bool = False
         self._best_model: Optional[ModelType] = None  # instance of ModelType but can also be None
-        self._results: Dict[int | float, Dict[int, Dict[str, float]]] = dict()
+        self._results_bestmodels: Dict[int, ModelType] = dict()
+        self._results: Dict[int, Dict[float, Dict[str, float]]] = dict()
 
     def _evaluate(self, model: ModelType, model_name, hyperparam_name: str):
         """
@@ -58,12 +59,14 @@ class ClusteringModelEvaluation(ABC):
             - evaluation time
         :param model: implementation of a specific clustering model
         """
-        components = {}  # n_components : dictionary keyed by hyperparameter
+        components_results = {}  # n_components : dictionary keyed by hyperparameter
+        components_bestmodels = {}
 
+        best_score_glb = -1  # initialize with the lowest rand scores
         for n in tqdm(self._n_components, desc=''):
             tqdm.write(f'Processing number of components: {n}')
             data_d = self.data.make_pca(n_comps=n).rescale()
-            best_score = -1  # initialize with the lowest rand scores
+            best_score_lcl = -1
             hyperparameters = {}
 
             for k in tqdm(self._hyperparam_values, desc='', leave=False):
@@ -81,13 +84,20 @@ class ClusteringModelEvaluation(ABC):
                     'time': elapsed
                 }
 
-                if score > best_score:
-                    best_score = score
+                # overall
+                if score > best_score_glb:
+                    best_score_glb = score
                     self._best_model = model
 
+                # locally to value n
+                if score > best_score_lcl:
+                    best_score_lcl = score
+                    components_bestmodels[n] = model
+
                 hyperparameters[k] = results
-            components[n] = hyperparameters
-        self._results = components
+            components_results[n] = hyperparameters
+        self._results = components_results
+        self._results_bestmodels = components_bestmodels
         self._evaluated = True
 
         # Save the results to a JSON file using the constructed filename
@@ -110,22 +120,34 @@ class ClusteringModelEvaluation(ABC):
             os.mkdir(get_results_dir())
 
         result_name = os.path.join(get_results_dir(), f"{model_name}_{hyperparam_name}_result.json")
-        bestmodel_name = os.path.join(get_results_dir(), f"{model_name}_{hyperparam_name}_best.pkl")
+        result_bestmod_name = os.path.join(get_results_dir(), f"{model_name}_{hyperparam_name}_result_bestmodels.json")
+        bestmod_name = os.path.join(get_results_dir(), f"{model_name}_{hyperparam_name}_bestmodel.pkl")
 
         print(f"Saving {result_name}")
         with open(result_name, 'w') as file:
             json.dump(self.results(), file)
 
-        print(f"Saving {bestmodel_name}")
-        with open(bestmodel_name, 'wb') as f:
+        print(f"Saving {result_bestmod_name}")
+        with open(result_bestmod_name, 'w') as fl:
+            json.dump(self.results_bestmodels(), fl)
+
+        print(f"Saving {bestmod_name}")
+        with open(bestmod_name, 'wb') as f:
             pickle.dump(self.best_model(), f)
 
-    def results(self) -> Dict[float, Dict[int, Dict[str, float]]]:
+    def results(self) -> Dict[int, Dict[float, Dict[str, float]]]:
         """
         Provides results of evaluation in a dictionary format ( kernel size : number of components : clusters, score )
         """
         self._is_evaluated()
         return self._results
+
+    def results_bestmodels(self) -> Dict[int, ModelType]:
+        """
+
+        """
+        self._is_evaluated()
+        return self._results_bestmodels
 
     def best_model(self) -> ModelType:
         """
@@ -213,7 +235,8 @@ class ClusteringModelEvaluation(ABC):
 #                    y_label='Time', save=save, file_name=file_name)
 
 
-def load_result(model_name: str, hyperparam_name: str) -> (Dict[float, Dict[int, Dict[str, float]]], ModelType):
+def load_results(model_name: str, hyperparam_name: str) -> (
+        Dict[int, Dict[float, Dict[str, float]]], Dict[int, ModelType], ModelType):
     """
 
     :param model_name:
@@ -222,18 +245,23 @@ def load_result(model_name: str, hyperparam_name: str) -> (Dict[float, Dict[int,
     """
     # Specify the path to your JSON file
     result_name = os.path.join(get_results_dir(), f"{model_name}_{hyperparam_name}_result.json")
-    bestmodel_name = os.path.join(get_results_dir(), f"{model_name}_{hyperparam_name}_best.pkl")
+    result_bestmod_name = os.path.join(get_results_dir(), f"{model_name}_{hyperparam_name}_result_bestmodels.json")
+    bestmod_name = os.path.join(get_results_dir(), f"{model_name}_{hyperparam_name}_bestmodel.pkl")
 
     # Open the JSON file in read mode
     print(f"Loading {result_name}")
     with open(result_name, 'r') as file:
         result = json.load(file)
 
-    print(f"Loading {bestmodel_name}")
-    with open(bestmodel_name, 'rb') as f:
+    print(f"Loading {result_bestmod_name}")
+    with open(result_bestmod_name, 'r') as fl:
+        result_bestmodel = json.load(fl)
+
+    print(f"Loading {bestmod_name}")
+    with open(bestmod_name, 'rb') as f:
         best_model = pickle.load(f)
 
-    return result, best_model
+    return result, result_bestmodel, best_model
 
 
 # MEAN SHIFT
