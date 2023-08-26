@@ -1,6 +1,7 @@
 import os
 import time
 import json
+import pickle
 import numpy as np
 import pandas as pd
 
@@ -108,11 +109,16 @@ class ClusteringModelEvaluation(ABC):
         if not os.path.exists(get_results_dir()):
             os.mkdir(get_results_dir())
 
-        filename = os.path.join(get_results_dir(), f"{model_name}_{hyperparam_name}.json")
+        result_name = os.path.join(get_results_dir(), f"{model_name}_{hyperparam_name}_result.json")
+        bestmodel_name = os.path.join(get_results_dir(), f"{model_name}_{hyperparam_name}_best.pkl")
 
-        print(f"Saving {filename}")
-        with open(filename, 'w') as file:
+        print(f"Saving {result_name}")
+        with open(result_name, 'w') as file:
             json.dump(self.results(), file)
+
+        print(f"Saving {bestmodel_name}")
+        with open(bestmodel_name, 'wb') as f:
+            pickle.dump(self.best_model(), f)
 
     def results(self) -> Dict[float, Dict[int, Dict[str, float]]]:
         """
@@ -207,7 +213,7 @@ class ClusteringModelEvaluation(ABC):
 #                    y_label='Time', save=save, file_name=file_name)
 
 
-def load_result(model_name: str, hyperparam_name: str) -> Dict[float, Dict[int, Dict[str, float]]]:
+def load_result(model_name: str, hyperparam_name: str) -> (Dict[float, Dict[int, Dict[str, float]]], ModelType):
     """
 
     :param model_name:
@@ -215,14 +221,19 @@ def load_result(model_name: str, hyperparam_name: str) -> Dict[float, Dict[int, 
     :return:
     """
     # Specify the path to your JSON file
-    filename = os.path.join(get_results_dir(), f"{model_name}_{hyperparam_name}.json")
+    result_name = os.path.join(get_results_dir(), f"{model_name}_{hyperparam_name}_result.json")
+    bestmodel_name = os.path.join(get_results_dir(), f"{model_name}_{hyperparam_name}_best.pkl")
 
     # Open the JSON file in read mode
-    print(f"Loading {filename}")
-    with open(filename, 'r') as json_file:
-        result = json.load(json_file)
+    print(f"Loading {result_name}")
+    with open(result_name, 'r') as file:
+        result = json.load(file)
 
-    return result
+    print(f"Loading {bestmodel_name}")
+    with open(bestmodel_name, 'rb') as f:
+        best_model = pickle.load(f)
+
+    return result, best_model
 
 
 # MEAN SHIFT
