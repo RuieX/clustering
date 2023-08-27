@@ -1,5 +1,6 @@
 import os
 import time
+import copy
 import json
 import pickle
 import numpy as np
@@ -71,9 +72,9 @@ class ClusteringModelEvaluation(ABC):
 
             for k in tqdm(self._hyperparam_values, desc='', leave=False):
                 tqdm.write(f'Processing {hyperparam_name} value: {k}')
-                model_adj = model.set_params(**{hyperparam_name: k})
+                model = model.set_params(**{hyperparam_name: k})
                 t1 = time.perf_counter()
-                labels = model_adj.fit_predict(data_pca.x)
+                labels = model.fit_predict(data_pca.x)
                 t2 = time.perf_counter()
                 elapsed = t2 - t1
 
@@ -88,7 +89,7 @@ class ClusteringModelEvaluation(ABC):
                 if score > best_score_lcl:
                     best_score_lcl = score
                     components_bestmodels[n] = {
-                        'model': model_adj,
+                        'model': copy.deepcopy(model),
                         f'{hyperparam_name}': k,
                         'score': score,
                         'n_clusters': len(set(labels)),
@@ -99,7 +100,8 @@ class ClusteringModelEvaluation(ABC):
                 if score > best_score_glb:
                     best_score_glb = score
                     self._best_model = {
-                        'model': model_adj,
+                        'model': copy.deepcopy(model),
+                        'n_components': n,
                         f'{hyperparam_name}': k,
                         'score': score,
                         'n_clusters': len(set(labels)),
