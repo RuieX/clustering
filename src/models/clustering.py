@@ -179,7 +179,7 @@ class ClusteringModelEvaluation(ABC):
 
 # todo fixed but not tried
 
-    
+
     def load_results(self):
         """
         """
