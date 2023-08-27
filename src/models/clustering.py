@@ -44,9 +44,9 @@ class ClusteringModelEvaluation(ABC):
         self._hyperparam_values: List[int | float] = hyperparam_vals
 
         self._evaluated: bool = False
-        self._best_model: Optional[ModelType] = None  # instance of ModelType but can also be None
-        self._results_bestmodels: Dict[int, ModelType] = dict()
         self._results: Dict[int, Dict[float, Dict[str, float]]] = dict()
+        self._results_bestmodels: Dict[int, Dict[str, ModelType | float]] = dict()
+        self._best_model: Dict[str, ModelType | float] = dict()
 
     def _evaluate(self, model: ModelType, model_name, hyperparam_name: str):
         """
@@ -71,9 +71,9 @@ class ClusteringModelEvaluation(ABC):
 
             for k in tqdm(self._hyperparam_values, desc='', leave=False):
                 tqdm.write(f'Processing {hyperparam_name} value: {k}')
-                model = model.set_params(**{hyperparam_name: k})
+                model_adj = model.set_params(**{hyperparam_name: k})
                 t1 = time.perf_counter()
-                labels = model.fit_predict(data_pca.x)
+                labels = model_adj.fit_predict(data_pca.x)
                 t2 = time.perf_counter()
                 elapsed = t2 - t1
 
@@ -84,15 +84,27 @@ class ClusteringModelEvaluation(ABC):
                     'time': elapsed
                 }
 
-                # overall
-                if score > best_score_glb:
-                    best_score_glb = score
-                    self._best_model = model
-
                 # locally to value n
                 if score > best_score_lcl:
                     best_score_lcl = score
-                    components_bestmodels[n] = model
+                    components_bestmodels[n] = {
+                        'model': model_adj,
+                        f'{hyperparam_name}': k,
+                        'score': score,
+                        'n_clusters': len(set(labels)),
+                        'time': elapsed
+                    }
+
+                # overall
+                if score > best_score_glb:
+                    best_score_glb = score
+                    self._best_model = {
+                        'model': model_adj,
+                        f'{hyperparam_name}': k,
+                        'score': score,
+                        'n_clusters': len(set(labels)),
+                        'time': elapsed
+                    }
 
                 hyperparameters[k] = results
             components_results[n] = hyperparameters
@@ -142,14 +154,14 @@ class ClusteringModelEvaluation(ABC):
         self._is_evaluated()
         return self._results
 
-    def results_bestmodels(self) -> Dict[int, ModelType]:
+    def results_bestmodels(self) -> Dict[int, Dict[str, ModelType | float]]:
         """
 
         """
         self._is_evaluated()
         return self._results_bestmodels
 
-    def best_model(self) -> ModelType:
+    def best_model(self) -> Dict[str, ModelType | float]:
         """
         Returns best model in the evaluation
         """
@@ -236,7 +248,9 @@ class ClusteringModelEvaluation(ABC):
 
 
 def load_results(model_name: str, hyperparam_name: str) -> (
-        Dict[int, Dict[float, Dict[str, float]]], Dict[int, ModelType], ModelType):
+        Dict[int, Dict[float, Dict[str, float]]],
+        Dict[int, Dict[str, ModelType | float]],
+        Dict[str, ModelType | float]):
     """
 
     :param model_name:
