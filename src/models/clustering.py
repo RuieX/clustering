@@ -176,10 +176,6 @@ class ClusteringModelEvaluation(ABC):
         self._is_evaluated()
         return self._best_model
 
-
-# todo fixed but not tried
-
-
     def load_results(self):
         """
         """
