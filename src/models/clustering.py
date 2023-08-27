@@ -73,14 +73,14 @@ class ClusteringModelEvaluation(ABC):
                 tqdm.write(f'Processing {hyperparam_name} value: {k}')
                 model = model.set_params(**{hyperparam_name: k})
                 t1 = time.perf_counter()
-                model.fit(data_pca)
+                labels = model.fit_predict(data_pca.x)
                 t2 = time.perf_counter()
                 elapsed = t2 - t1
 
-                score = rand_score(data_pca.y, model.labels_)
+                score = rand_score(data_pca.y, labels)
                 results = {
                     'score': score,
-                    'n_clusters': model.n_clusters,
+                    'n_clusters': len(set(labels)),
                     'time': elapsed
                 }
 

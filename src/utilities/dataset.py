@@ -59,6 +59,7 @@ def load_data(reduced: bool = False) -> Dataset:
     X = pd.read_csv(x_file)
 
     print(f"Loading {y_file}")
-    y = pd.read_csv(y_file).values.ravel()
+    # y = pd.read_csv(y_file).values.ravel()
+    y = pd.read_csv(y_file).iloc[:, 0].values
 
     return Dataset(x=X, y=y)
