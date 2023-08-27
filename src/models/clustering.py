@@ -63,7 +63,7 @@ class ClusteringModelEvaluation(ABC):
         components_bestmodels = {}
 
         best_score_glb = -1  # initialize with the lowest rand scores
-        for n in tqdm(self._n_components, desc=''):
+        for n in tqdm(self._n_components, desc='', leave=False):
             tqdm.write(f'Processing number of components: {n}')
             data_pca = self.data.make_pca(n_comps=n).rescale()
             best_score_lcl = -1
