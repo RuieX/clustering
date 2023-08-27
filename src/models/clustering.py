@@ -136,9 +136,12 @@ class ClusteringModelEvaluation(ABC):
         if not os.path.exists(get_results_dir()):
             os.mkdir(get_results_dir())
 
-        results_name = os.path.join(get_results_dir(), f"{self.model_name}_{self.hyperparameter_name}_result.json")
-        results_bestmodel_name = os.path.join(get_results_dir(), f"{self.model_name}_{self.hyperparameter_name}_result_bestmodels.pkl")
-        bestmodel_name = os.path.join(get_results_dir(), f"{self.model_name}_{self.hyperparameter_name}_bestmodel.pkl")
+        results_name = os.path.join(
+            get_results_dir(), f"{self.model_name}_{self.hyperparameter_name}_result.json")
+        results_bestmodel_name = os.path.join(
+            get_results_dir(), f"{self.model_name}_{self.hyperparameter_name}_result_bestmodels.pkl")
+        bestmodel_name = os.path.join(
+            get_results_dir(), f"{self.model_name}_{self.hyperparameter_name}_bestmodel.pkl")
 
         print(f"Saving {results_name}")
         with open(results_name, 'w') as file:
@@ -176,14 +179,17 @@ class ClusteringModelEvaluation(ABC):
 
 # todo fixed but not tried
 
-
+    
     def load_results(self):
         """
         """
         # Specify the path to your JSON file
-        results_name = os.path.join(get_results_dir(), f"{self.model_name}_{self.hyperparameter_name}_result.json")
-        results_bestmodel_name = os.path.join(get_results_dir(), f"{self.model_name}_{self.hyperparameter_name}_result_bestmodels.pkl")
-        bestmodel_name = os.path.join(get_results_dir(), f"{self.model_name}_{self.hyperparameter_name}_bestmodel.pkl")
+        results_name = os.path.join(
+            get_results_dir(), f"{self.model_name}_{self.hyperparameter_name}_result.json")
+        results_bestmodel_name = os.path.join(
+            get_results_dir(), f"{self.model_name}_{self.hyperparameter_name}_result_bestmodels.pkl")
+        bestmodel_name = os.path.join(
+            get_results_dir(), f"{self.model_name}_{self.hyperparameter_name}_bestmodel.pkl")
 
         # Open the JSON file in read mode
         print(f"Loading {results_name}")
