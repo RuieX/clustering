@@ -23,15 +23,14 @@ N_JOBS = -1
 ModelType = TypeVar("ModelType", MeanShift, SpectralClustering, GaussianMixture)
 
 
-class ClusteringModelEvaluation(ABC):
+class ClusteringModel(ABC):
     """
-    ClusteringModelEvaluation, an abstract class to implement multiple evaluation
-    over multiple hyperparameters and dimensionality
-
-    This class automatize different clustering models evaluation over a different combination of:
-        - hyperparameter (size of kernel, number of clusters)
-        - number of components
-    Provide some methods for analyzing evaluation results, such as getting the best model or plotting some trends
+    Abstract class for evaluating various clustering models (MeanShift, SpectralClustering, GaussianMixture).
+    This class generalizes the evaluation process across different models by considering combinations of:
+        - number of principal components
+        - model specific hyperparameters
+        (MeanShift: bandwidth, SpectralClustering: n_clusters, GaussianMixture: n_components)
+    The class also provides methods for retrieving the best models and plotting evaluation results.
     """
     model_type: Optional[ModelType] = None
     model_name: str = 'model'
@@ -39,43 +38,44 @@ class ClusteringModelEvaluation(ABC):
 
     def __init__(self, data: Dataset, n_components: List[int], hyperparam_vals: List[int | float]):
         """
+        Initialize the ClusteringModel instance.
         :param data: dataset for evaluation
-        :param n_components: list of number of components to evaluate
-        :param hyperparam_vals: list of model's hyperparameter value
+        :param n_components: list of number of principal components to evaluate
+        :param hyperparam_vals: list of model's hyperparameter values
         """
         self.data: Dataset = data
         self._n_components: List[int] = n_components
         self._hyperparam_values: List[int | float] = hyperparam_vals
 
-        self._evaluated: bool = False
         self._results: Dict[int, Dict[float, Dict[str, float]]] = dict()
         self._results_bestmodels: Dict[int, Dict[str, ModelType | float]] = dict()
         self._best_model: Dict[str, ModelType | float] = dict()
+        self._evaluated: bool = False
 
     def evaluate(self):
         """
-        Evaluate a ClusteringModel over all combination of
-            - number of components used
-            - hyperparameter
-        Results are organized in a dictionary providing:
-            - number of clusters found
-            - random index score of any model
+        Evaluate the given clustering model over all combination of number of principal components and hyperparameters.
+        All results will be stored in self._results providing:
+            - number of clusters
+            - random index score
             - evaluation time
-        :param model: implementation of a specific clustering model TODO delete this line
+        The models with the best score for each number of components will be stored in self._results_bestmodels.
+        The best model overall will be stored in self._best_model.
         """
-        components_results = {}  # n_components : dictionary keyed by hyperparameter
+        components_results = {}  # dictionaries keyed by number of principal components
         components_bestmodels = {}
 
-        best_score_glb = -1  # initialize with the lowest rand scores
+        best_score_glb = -1  # initialize with the lowest rand scores possible
+
         for n in tqdm(self._n_components, desc=''):
             tqdm.write(f'Processing number of components: {n}')
-            data_pca = self.data.make_pca(n_comps=n).rescale()
+            data_pca = self.data.make_pca(n_comps=n).rescale()  # applying PCA to dataset
             best_score_lcl = -1
-            hyperparameters = {}
+            hyperparameters = {}  # dictionary keyed by hyperparameter value
 
             for k in tqdm(self._hyperparam_values, desc='', leave=False):
                 tqdm.write(f'Processing {self.hyperparameter_name} value: {k}')
-                model = self.model_type.set_params(**{self.hyperparameter_name: k})
+                model = self.model_type.set_params(**{self.hyperparameter_name: k})  # changing model's parameters
                 t1 = time.perf_counter()
                 labels = model.fit_predict(data_pca.x)
                 t2 = time.perf_counter()
@@ -88,7 +88,7 @@ class ClusteringModelEvaluation(ABC):
                     'time': elapsed
                 }
 
-                # locally to value n
+                # for local best model (over hyperparameter values)
                 if score > best_score_lcl:
                     best_score_lcl = score
                     components_bestmodels[n] = {
@@ -99,7 +99,7 @@ class ClusteringModelEvaluation(ABC):
                         'time': elapsed
                     }
 
-                # overall
+                # for overall best model
                 if score > best_score_glb:
                     best_score_glb = score
                     self._best_model = {
@@ -117,13 +117,13 @@ class ClusteringModelEvaluation(ABC):
         self._results_bestmodels = components_bestmodels
         self._evaluated = True
 
-        # Save the results to a JSON file using the constructed filename
+        # Save the results to files
         self._save_result()
 
     def _is_evaluated(self):
         """
-        Check if model was evaluated,
-            it raises an exception if it hasn't
+        Check if the model has been evaluated.
+        Raises an exception otherwise
         """
         if not self._evaluated:
             raise Exception("Model has not been evaluated yet.")
@@ -131,7 +131,7 @@ class ClusteringModelEvaluation(ABC):
 
     def _save_result(self):
         """
-        :return:
+        Save the evaluation results and best models to JSON and pickle files.
         """
         if not os.path.exists(get_results_dir()):
             os.mkdir(get_results_dir())
@@ -157,29 +157,33 @@ class ClusteringModelEvaluation(ABC):
 
     def results(self) -> Dict[int, Dict[float, Dict[str, float]]]:
         """
-        Provides results of evaluation in a dictionary format ( kernel size : number of components : clusters, score )
+        Get the evaluation results as a dictionary, where the keys are the number of principal components.
+        Each key corresponds to a nested dictionary with hyperparameter values as keys containing:
+            - number of clusters
+            - random index score
+            - evaluation time.
         """
         self._is_evaluated()
         return self._results
 
     def results_bestmodels(self) -> Dict[int, Dict[str, ModelType | float]]:
         """
-
+        Get the best models for each number of components.
         """
         self._is_evaluated()
         return self._results_bestmodels
 
     def best_model(self) -> Dict[str, ModelType | float]:
         """
-        Returns best model in the evaluation
+        Get the best model in the evaluation.
         """
         self._is_evaluated()
         return self._best_model
 
     def load_results(self):
         """
+        Load the evaluation results and best models from files.
         """
-        # Specify the path to your JSON file
         results_name = os.path.join(
             get_results_dir(), f"{self.model_name}_{self.hyperparameter_name}_result.json")
         results_bestmodel_name = os.path.join(
@@ -187,7 +191,6 @@ class ClusteringModelEvaluation(ABC):
         bestmodel_name = os.path.join(
             get_results_dir(), f"{self.model_name}_{self.hyperparameter_name}_bestmodel.pkl")
 
-        # Open the JSON file in read mode
         print(f"Loading {results_name}")
         with open(results_name, 'r') as file:
             results = json.load(file)
@@ -210,8 +213,6 @@ class ClusteringModelEvaluation(ABC):
 
 
 # todo plot haven't started seeing this
-
-
 
     def _plot(self, title: str, res: str, y_label: str,
               save: bool = False, file_name: str = 'graph'):
@@ -294,17 +295,21 @@ class ClusteringModelEvaluation(ABC):
 
 # MEAN SHIFT
 
-class MeanShiftEvaluation(ClusteringModelEvaluation):
+class MeanShiftEvaluation(ClusteringModel):
     """
-    This class automatize different MeanShiftCluster models evaluation over a different combination of:
-        - kernel size
-        - number of components
-    Provide some methods for analyzing evaluation results, such as getting the best model or plotting some trends
+    Class for evaluating MeanShift clustering models using combination of
+    number of principal components and hyperparameter bandwidth values.
     """
     model = "MeanShift"
     hyperparameter_name = "bandwidth"
 
     def __init__(self, data: Dataset, n_components: List[int], hyperparam_vals: List[int | float]):
+        """
+        Initialize a MeanShift evaluation instance using SpectralClustering.
+        :param data: The dataset for evaluation.
+        :param n_components: List of number of components to evaluate.
+        :param hyperparam_vals: List of hyperparameter values to evaluate.
+        """
         super().__init__(data, n_components, hyperparam_vals)
         self.hyperparameter = self.hyperparameter_name
         self.model_name = self.model
@@ -313,16 +318,21 @@ class MeanShiftEvaluation(ClusteringModelEvaluation):
 
 # NORMALIZED CUT
 
-class NormalizedCutEvaluation(ClusteringModelEvaluation):
+class NormalizedCutEvaluation(ClusteringModel):
     """
-    This class automatize different NormalizedCutClustering models evaluation over a different combination of:
-        - k (number of clusters)
-    Provide some methods for analyzing evaluation results, such as getting the best model or plotting some trends
+    Class for evaluating NormalizedCut clustering models using combination of
+    number of principal components and hyperparameter n_clusters values.
     """
     model = "NormalizedCut"
     hyperparameter_name = "n_clusters"
 
     def __init__(self, data: Dataset, n_components: List[int], hyperparam_vals: List[int | float]):
+        """
+        Initialize a NormalizedCut evaluation instance using SpectralClustering.
+        :param data: The dataset for evaluation.
+        :param n_components: List of number of components to evaluate.
+        :param hyperparam_vals: List of hyperparameter values to evaluate.
+        """
         super().__init__(data, n_components, hyperparam_vals)
         self.hyperparameter = self.hyperparameter_name
         self.model_name = self.model
@@ -331,16 +341,21 @@ class NormalizedCutEvaluation(ClusteringModelEvaluation):
 
 # MIXTURE GAUSSIAN
 
-class MixtureGaussianEvaluation(ClusteringModelEvaluation):
+class MixtureGaussianEvaluation(ClusteringModel):
     """
-    This class automatize different NormalizedCutClustering models evaluation over a different combination of:
-        - k (number of clusters)
-    Provide some methods for analyzing evaluation results, such as getting the best model or plotting some trends
+    Class for evaluating GaussianMixture clustering models using combination of
+    number of principal components and hyperparameter n_components values.
     """
     model = "GaussianMixture"
     hyperparameter_name = "n_components"
 
     def __init__(self, data: Dataset, n_components: List[int], hyperparam_vals: List[int | float]):
+        """
+        Initialize a GaussianMixture evaluation instance.
+        :param data: The dataset for evaluation.
+        :param n_components: List of number of components to evaluate.
+        :param hyperparam_vals: List of hyperparameter values to evaluate.
+        """
         super().__init__(data, n_components, hyperparam_vals)
         self.hyperparameter = self.hyperparameter_name
         self.model_name = self.model
