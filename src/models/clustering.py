@@ -3,8 +3,6 @@ import time
 import copy
 import json
 import pickle
-import numpy as np
-import pandas as pd
 import matplotlib.pyplot as plt
 import seaborn as sns
 
@@ -211,16 +209,13 @@ class ClusteringModel(ABC):
 
     def _plot(self, title: str, result: str, y_label: str, save: bool = False, file_name: str = 'plot'):
         """
-        Plot a graph foreach different kernel used:
-            - x axes: PCA dimension
-            - y axes: stats (number of clusters / score / time)
-        :param title: graph title
-        :param result: whether score or number of cluster or time
-        :param y_label: name for ordinates axes
-        :param save: if to save the graph to images directory
-        :param file_name: name of stored file
+        Generate a line plot PCA dimension vs a result metric (score/number of clusters/time)
+        :param title: Title of the plot.
+        :param result: The specific result metric to plot (e.g., score, n_clusters, time).
+        :param y_label: Label for the y-axis.
+        :param save: Whether to save the plot as an image.
+        :param file_name: Name for the saved image file (without extension).
         """
-
         # Switching keys PCA dimensions and hyperparameter
         # for easier access to result of each hyperparameter
         inverted_dict = {
@@ -258,30 +253,32 @@ class ClusteringModel(ABC):
         # Show the plot
         plt.show()
 
-    def plot_score(self, save=False, file_name='accuracy'):
+    def plot_score(self, save=False):
         """
         Plot score vs PCA dimension
-        :save: if to save the graph to images directory
-        :file_name: name of stored file
+        :param save: if true, save the plot as image
+        :return:
         """
-        self._plot(title="Random Index Score", result='score', y_label='Score', save=save, file_name=file_name)
+        self._plot(title="Random Index Score", result='score', y_label='Score',
+                   save=save, file_name=f'{self.model_name}_score')
 
-    def plot_n_clusters(self, save=False, file_name='n_clusters'):
+    def plot_n_clusters(self, save=False):
         """
         Plot n_cluster vs PCA dimension
-        :save: if to save the graph to images directory
-        :file_name: name of stored file
+        :param save: if true, save the plot as image
+        :return:
         """
-        self._plot(title="Varying Cluster Number", result='n_clusters', y_label='NClusters', save=save,
-                   file_name=file_name)
+        self._plot(title="Cluster Number", result='n_clusters', y_label='No. Clusters',
+                   save=save, file_name=f'{self.model_name}_n_clusters')
 
-    def plot_time(self, save=False, file_name='time'):
+    def plot_time(self, save=False):
         """
         Plot execution time vs PCA dimension
-        :save: if to save the graph to images directory
-        :file_name: name of stored file
+        :param save: if true, save the plot as image
+        :return:
         """
-        self._plot(title="Elapsed Execution Time", result='time', y_label='Time', save=save, file_name=file_name)
+        self._plot(title="Execution Time", result='time', y_label='Time',
+                   save=save, file_name=f'{self.model_name}_time')
 
 
 # MEAN SHIFT
