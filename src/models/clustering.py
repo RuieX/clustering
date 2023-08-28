@@ -5,6 +5,8 @@ import json
 import pickle
 import numpy as np
 import pandas as pd
+import matplotlib.pyplot as plt
+import seaborn as sns
 
 from abc import ABC
 from typing import Dict, List, TypeVar, Optional
@@ -12,7 +14,6 @@ from tqdm import tqdm
 from sklearn.cluster import MeanShift, SpectralClustering
 from sklearn.mixture import GaussianMixture
 from sklearn.metrics import rand_score
-from matplotlib import pyplot as plt
 
 from src.models.dataset import Dataset
 from src.utilities.utils import get_results_dir, get_images_dir
@@ -27,7 +28,7 @@ class ClusteringModel(ABC):
     """
     Abstract class for evaluating various clustering models (MeanShift, SpectralClustering, GaussianMixture).
     This class generalizes the evaluation process across different models by considering combinations of:
-        - number of principal components
+        - PCA dimensions
         - model specific hyperparameters
         (MeanShift: bandwidth, SpectralClustering: n_clusters, GaussianMixture: n_components)
     The class also provides methods for retrieving the best models and plotting evaluation results.
@@ -40,7 +41,7 @@ class ClusteringModel(ABC):
         """
         Initialize the ClusteringModel instance.
         :param data: dataset for evaluation
-        :param n_components: list of number of principal components to evaluate
+        :param n_components: list of PCA dimensions to evaluate
         :param hyperparam_vals: list of model's hyperparameter values
         """
         self.data: Dataset = data
@@ -54,21 +55,21 @@ class ClusteringModel(ABC):
 
     def evaluate(self):
         """
-        Evaluate the given clustering model over all combination of number of principal components and hyperparameters.
+        Evaluate the given clustering model over all combination of PCA dimensions and hyperparameters.
         All results will be stored in self._results providing:
             - number of clusters
             - random index score
             - evaluation time
-        The models with the best score for each number of components will be stored in self._results_bestmodels.
+        The models with the best score for each PCA dimensions will be stored in self._results_bestmodels.
         The best model overall will be stored in self._best_model.
         """
-        components_results = {}  # dictionaries keyed by number of principal components
+        components_results = {}  # dictionaries keyed by PCA dimensions
         components_bestmodels = {}
 
         best_score_glb = -1  # initialize with the lowest rand scores possible
 
         for n in tqdm(self._n_components, desc=''):
-            tqdm.write(f'Processing number of components: {n}')
+            tqdm.write(f'Processing PCA dimension: {n}')
             data_pca = self.data.make_pca(n_comps=n).rescale()  # applying PCA to dataset
             best_score_lcl = -1
             hyperparameters = {}  # dictionary keyed by hyperparameter value
@@ -157,7 +158,7 @@ class ClusteringModel(ABC):
 
     def results(self) -> Dict[int, Dict[float, Dict[str, float]]]:
         """
-        Get the evaluation results as a dictionary, where the keys are the number of principal components.
+        Get the evaluation results as a dictionary, where the keys are the PCA dimensions.
         Each key corresponds to a nested dictionary with hyperparameter values as keys containing:
             - number of clusters
             - random index score
@@ -168,7 +169,7 @@ class ClusteringModel(ABC):
 
     def results_bestmodels(self) -> Dict[int, Dict[str, ModelType | float]]:
         """
-        Get the best models for each number of components.
+        Get the best models for each PCA dimension.
         """
         self._is_evaluated()
         return self._results_bestmodels
@@ -208,89 +209,79 @@ class ClusteringModel(ABC):
         self._best_model = best_model
         self._evaluated = True
 
-
-
-
-
-# todo plot haven't started seeing this
-
-    def _plot(self, title: str, res: str, y_label: str,
-              save: bool = False, file_name: str = 'graph'):
+    def _plot(self, title: str, result: str, y_label: str, save: bool = False, file_name: str = 'plot'):
         """
         Plot a graph foreach different kernel used:
-            - x axes: number of component
+            - x axes: PCA dimension
             - y axes: stats (number of clusters / score / time)
         :param title: graph title
-        :param res: weather score or number of cluster or time
+        :param result: whether score or number of cluster or time
         :param y_label: name for ordinates axes
         :param save: if to save the graph to images directory
         :param file_name: name of stored file
         """
 
-        # transform
-        #   components     : hyperparameter : results
-        #   hyperparameter : components     : results
-        inverted_dictionary = {
+        # Switching keys PCA dimensions and hyperparameter
+        # for easier access to result of each hyperparameter
+        inverted_dict = {
             k: {k2: v2[k] for k2, v2 in self.results().items()}
             for k in self.results()[list(self.results().keys())[0]]
         }
 
-        for kernel, dims in inverted_dictionary.items():
-
-            x = []  # number of components
+        for param, dim in inverted_dict.items():
+            x = []  # PCA dimensions
             y = []  # result
 
-            for nc, out in dims.items():
-                x.append(nc)
-                y.append(out[res])
+            for n, res in dim.items():
+                x.append(n)
+                y.append(res[result])
 
-            # Plot the points connected by a line
-            plt.plot(x, y, '-o', label=f'{kernel}  ')
-
-        # Add a legend
-        plt.legend(bbox_to_anchor=(1, 1), title=self.hyperparameter_name, loc='upper left', borderaxespad=0.)
+            # Plot the points
+            plt.plot(x, y, '-o', label=f'{param}')
 
         # Set the x and y-axis labels
+        sns.set_style("whitegrid")
         plt.title(title)
-        plt.xlabel('Number of components')
+        plt.xlabel('PCA dimension')
         plt.ylabel(y_label)
 
-        # Show the plot
+        # Add legend
+        plt.legend(bbox_to_anchor=(1, 1), title=self.hyperparameter_name, loc='upper left', borderaxespad=0.)
+
+        # Save the plot
         if save:
             if not os.path.exists(get_images_dir()):
                 os.mkdir(get_images_dir())
-            file_name = os.path.join(get_images_dir(), f"{file_name}.{IMG_EXT}")
+            file_name = os.path.join(get_images_dir(), f"{file_name}.png")
             plt.savefig(file_name)
 
-        # SAve the plot
+        # Show the plot
         plt.show()
 
     def plot_score(self, save=False, file_name='accuracy'):
         """
-        Plot score graph
+        Plot score vs PCA dimension
         :save: if to save the graph to images directory
         :file_name: name of stored file
         """
-        self._plot(title="Random Index Score", res='score',
-                   y_label='Score', save=save, file_name=file_name)
+        self._plot(title="Random Index Score", result='score', y_label='Score', save=save, file_name=file_name)
 
     def plot_n_clusters(self, save=False, file_name='n_clusters'):
         """
-        Plot n_cluster graph
+        Plot n_cluster vs PCA dimension
         :save: if to save the graph to images directory
         :file_name: name of stored file
         """
-        self._plot(title="Varying Cluster Number", res='n_clusters',
-                   y_label='NClusters', save=save, file_name=file_name)
+        self._plot(title="Varying Cluster Number", result='n_clusters', y_label='NClusters', save=save,
+                   file_name=file_name)
 
     def plot_time(self, save=False, file_name='time'):
         """
-        Plot time execution graph
+        Plot execution time vs PCA dimension
         :save: if to save the graph to images directory
         :file_name: name of stored file
         """
-        self._plot(title="Elapsed Execution Time", res='time',
-                   y_label='Time', save=save, file_name=file_name)
+        self._plot(title="Elapsed Execution Time", result='time', y_label='Time', save=save, file_name=file_name)
 
 
 # MEAN SHIFT
@@ -298,7 +289,7 @@ class ClusteringModel(ABC):
 class MeanShiftEvaluation(ClusteringModel):
     """
     Class for evaluating MeanShift clustering models using combination of
-    number of principal components and hyperparameter bandwidth values.
+    PCA dimensions and hyperparameter bandwidth values.
     """
     model = "MeanShift"
     hyperparameter_name = "bandwidth"
@@ -307,7 +298,7 @@ class MeanShiftEvaluation(ClusteringModel):
         """
         Initialize a MeanShift evaluation instance using SpectralClustering.
         :param data: The dataset for evaluation.
-        :param n_components: List of number of components to evaluate.
+        :param n_components: List of PCA dimensions to evaluate.
         :param hyperparam_vals: List of hyperparameter values to evaluate.
         """
         super().__init__(data, n_components, hyperparam_vals)
@@ -321,7 +312,7 @@ class MeanShiftEvaluation(ClusteringModel):
 class NormalizedCutEvaluation(ClusteringModel):
     """
     Class for evaluating NormalizedCut clustering models using combination of
-    number of principal components and hyperparameter n_clusters values.
+    PCA dimensions and hyperparameter n_clusters values.
     """
     model = "NormalizedCut"
     hyperparameter_name = "n_clusters"
@@ -330,7 +321,7 @@ class NormalizedCutEvaluation(ClusteringModel):
         """
         Initialize a NormalizedCut evaluation instance using SpectralClustering.
         :param data: The dataset for evaluation.
-        :param n_components: List of number of components to evaluate.
+        :param n_components: List of PCA dimensions to evaluate.
         :param hyperparam_vals: List of hyperparameter values to evaluate.
         """
         super().__init__(data, n_components, hyperparam_vals)
@@ -344,16 +335,16 @@ class NormalizedCutEvaluation(ClusteringModel):
 class MixtureGaussianEvaluation(ClusteringModel):
     """
     Class for evaluating GaussianMixture clustering models using combination of
-    number of principal components and hyperparameter n_components values.
+    PCA dimensions and hyperparameter n_components values.
     """
     model = "GaussianMixture"
-    hyperparameter_name = "n_components"
+    hyperparameter_name = "n_components"  # refers to number of clusters, not PCA dimension
 
     def __init__(self, data: Dataset, n_components: List[int], hyperparam_vals: List[int | float]):
         """
         Initialize a GaussianMixture evaluation instance.
         :param data: The dataset for evaluation.
-        :param n_components: List of number of components to evaluate.
+        :param n_components: List of PCA dimensions to evaluate.
         :param hyperparam_vals: List of hyperparameter values to evaluate.
         """
         super().__init__(data, n_components, hyperparam_vals)
