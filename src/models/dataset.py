@@ -16,7 +16,6 @@ from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import MinMaxScaler
 
 from src.utilities.utils import get_dataset_dir, get_images_dir
-from src.utilities.settings import IMG_EXT
 # from assignment_3.clustering.utils import digits_histogram, plot_digit, plot_mean_digit, plot_cluster_frequencies_histo
 
 """

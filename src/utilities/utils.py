@@ -24,7 +24,7 @@ def get_results_dir() -> str:
     return path.join(get_root_dir(), RESULTS)
 
 
-def get_images_dir() -> str:  #todo not needed anyomre?
+def get_images_dir() -> str:
     """
     :return: path to images directory
     """
@@ -41,18 +41,3 @@ def has_files_in_dir(dir_path):
     files_in_dir = [item for item in items_in_dir if os.path.isfile(os.path.join(dir_path, item))]
 
     return len(files_in_dir) > 0
-
-
-# def nomakedirifnotexist(path_: str): #todo delete once done
-#     tfidf_dir = os.path.join(samples_dir, "tfidf")
-#     if not os.path.exists(tfidf_dir):
-#         os.mkdir(tfidf_dir)
-#
-#     tfidf_results_path = os.path.join(tfidf_dir, "tfidf_docs.pkl")
-#
-#instead of
-#     try:
-#         os.makedirs(path_)
-#         print(f"Created directory {path_} ")
-#     except OSError:
-#         pass

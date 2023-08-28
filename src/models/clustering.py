@@ -16,7 +16,7 @@ from matplotlib import pyplot as plt
 
 from src.models.dataset import Dataset
 from src.utilities.utils import get_results_dir, get_images_dir
-from src.utilities.settings import IMG_EXT, RANDOM_SEED
+from src.utilities.settings import RANDOM_SEED
 
 
 N_JOBS = -1
