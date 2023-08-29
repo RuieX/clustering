@@ -9,6 +9,7 @@ import seaborn as sns
 from abc import ABC
 from typing import Dict, List, TypeVar, Optional
 from tqdm import tqdm
+from tqdm.notebook import tqdm_notebook
 from sklearn.cluster import MeanShift, SpectralClustering
 from sklearn.mixture import GaussianMixture
 from sklearn.metrics import rand_score
@@ -66,14 +67,14 @@ class ClusteringModel(ABC):
 
         best_score_glb = -1  # initialize with the lowest rand scores possible
 
-        for n in tqdm(self._n_components, desc=''):
+        for n in tqdm_notebook(self._n_components, desc=''):
             tqdm.write(f'Processing PCA dimension: {n}')
             data_pca = self.data.make_pca(n_comps=n).rescale()  # applying PCA to dataset
             best_score_lcl = -1
             hyperparameters = {}  # dictionary keyed by hyperparameter value
 
-            for k in tqdm(self._hyperparam_values, desc='', leave=False):
-                tqdm.write(f'Processing {self.hyperparameter_name} value: {k}')
+            for k in tqdm_notebook(self._hyperparam_values, desc='', leave=False):
+                tqdm.write(f'PCA dimension: {n} - {self.hyperparameter_name} value: {k}')
                 model = self.model_type.set_params(**{self.hyperparameter_name: k})  # changing model's parameters
                 t1 = time.perf_counter()
                 labels = model.fit_predict(data_pca.x)
@@ -111,6 +112,7 @@ class ClusteringModel(ABC):
                     }
 
                 hyperparameters[k] = results
+            tqdm.write("")
             components_results[n] = hyperparameters
         self._results = components_results
         self._results_bestmodels = components_bestmodels
