@@ -92,7 +92,6 @@ class ClusteringModel(ABC):
                 if score > best_score_lcl:
                     best_score_lcl = score
                     components_bestmodels[n] = {
-                        'model': copy.deepcopy(model),
                         f'{self.hyperparameter_name}': k,
                         'score': score,
                         'n_clusters': len(set(labels)),
@@ -140,7 +139,7 @@ class ClusteringModel(ABC):
         results_name = os.path.join(
             get_results_dir(), f"{self.model_name}_{self.hyperparameter_name}_result.json")
         results_bestmodel_name = os.path.join(
-            get_results_dir(), f"{self.model_name}_{self.hyperparameter_name}_result_bestmodels.pkl")
+            get_results_dir(), f"{self.model_name}_{self.hyperparameter_name}_result_bestmodels.json")
         bestmodel_name = os.path.join(
             get_results_dir(), f"{self.model_name}_{self.hyperparameter_name}_bestmodel.pkl")
 
@@ -149,8 +148,8 @@ class ClusteringModel(ABC):
             json.dump(self.results(), file)
 
         print(f"Saving {results_bestmodel_name}")
-        with open(results_bestmodel_name, 'wb') as fl:
-            pickle.dump(self.results_bestmodels(), fl)
+        with open(results_bestmodel_name, 'w') as fl:
+            json.dump(self.results_bestmodels(), fl)
 
         print(f"Saving {bestmodel_name}")
         with open(bestmodel_name, 'wb') as f:
@@ -188,7 +187,7 @@ class ClusteringModel(ABC):
         results_name = os.path.join(
             get_results_dir(), f"{self.model_name}_{self.hyperparameter_name}_result.json")
         results_bestmodel_name = os.path.join(
-            get_results_dir(), f"{self.model_name}_{self.hyperparameter_name}_result_bestmodels.pkl")
+            get_results_dir(), f"{self.model_name}_{self.hyperparameter_name}_result_bestmodels.json")
         bestmodel_name = os.path.join(
             get_results_dir(), f"{self.model_name}_{self.hyperparameter_name}_bestmodel.pkl")
 
@@ -197,8 +196,8 @@ class ClusteringModel(ABC):
             results = json.load(file)
 
         print(f"Loading {results_bestmodel_name}")
-        with open(results_bestmodel_name, 'rb') as fl:
-            result_bestmodels = pickle.load(fl)
+        with open(results_bestmodel_name, 'r') as fl:
+            result_bestmodels = json.load(fl)
 
         print(f"Loading {bestmodel_name}")
         with open(bestmodel_name, 'rb') as f:
@@ -209,107 +208,24 @@ class ClusteringModel(ABC):
         self._best_model = best_model
         self._evaluated = True
 
-# todo VERSINOE FUNZIONANTE OG
-    # def _plot(self, title: str, result: str, y_label: str, save: bool = False, file_name: str = 'plot'):
-    #     """
-    #     Generate a line plot PCA dimension vs a result metric (score/number of clusters/time)
-    #     :param title: Title of the plot.
-    #     :param result: The specific result metric to plot (e.g., score, n_clusters, time).
-    #     :param y_label: Label for the y-axis.
-    #     :param save: Whether to save the plot as an image.
-    #     :param file_name: Name for the saved image file (without extension).
-    #     """
-    #     # Switching keys PCA dimensions and hyperparameter
-    #     # for easier access to result of each hyperparameter
-    #     inverted_dict = {
-    #         k: {k2: v2[k] for k2, v2 in self.results().items()}
-    #         for k in self.results()[list(self.results().keys())[0]]
-    #     }
-    #
-    #     for param, dim in inverted_dict.items():
-    #         x = []  # PCA dimensions
-    #         y = []  # result
-    #
-    #         for n, res in dim.items():
-    #             x.append(n)
-    #             y.append(res[result])
-    #
-    #         # Plot the points
-    #         plt.plot(x, y, '-o', label=f'{param}')
-    #
-    #     # Set the x and y-axis labels
-    #     sns.set_style("whitegrid")
-    #     plt.title(title)
-    #     plt.xlabel('PCA dimension')
-    #     plt.ylabel(y_label)
-    #
-    #     # Add legend
-    #     plt.legend(bbox_to_anchor=(1, 1), title=self.hyperparameter_name, loc='upper left', borderaxespad=0.)
-    #
-    #     # Save the plot
-    #     if save:
-    #         if not os.path.exists(get_images_dir()):
-    #             os.mkdir(get_images_dir())
-    #         file_name = os.path.join(get_images_dir(), f"{file_name}.png")
-    #         plt.savefig(file_name)
-    #
-    #     # Show the plot
-    #     plt.show()
-    #
-    # def plot_score(self, save=False):
-    #     """
-    #     Plot score vs PCA dimension
-    #     :param save: if true, save the plot as image
-    #     :return:
-    #     """
-    #     self._plot(title="Random Index Score", result='score', y_label='Score',
-    #                save=save, file_name=f'{self.model_name}_score')
-    #
-    # def plot_n_clusters(self, save=False):
-    #     """
-    #     Plot n_cluster vs PCA dimension
-    #     :param save: if true, save the plot as image
-    #     :return:
-    #     """
-    #     self._plot(title="Cluster Number", result='n_clusters', y_label='No. Clusters',
-    #                save=save, file_name=f'{self.model_name}_n_clusters')
-    #
-    # def plot_time(self, save=False):
-    #     """
-    #     Plot execution time vs PCA dimension
-    #     :param save: if true, save the plot as image
-    #     :return:
-    #     """
-    #     self._plot(title="Execution Time", result='time', y_label='Time',
-    #                save=save, file_name=f'{self.model_name}_time')
-
-# todo versione TTRIAL
-    def _plot(self, title: str, result: str, y_label: str, ax=None, highlight_best=False,
-              save: bool = False, file_name: str = 'plot'):
+    def _plot(self, title: str, result: str, y_label: str, ax=None, highlight_best=False):
         """
         Generate a line plot PCA dimension vs a result metric (score/number of clusters/time)
         :param title: Title of the plot.
         :param result: The specific result metric to plot (e.g., score, n_clusters, time).
         :param y_label: Label for the y-axis.
-        :param save: Whether to save the plot as an image.
-        :param file_name: Name for the saved image file (without extension).
         :param ax: Axes object for plotting (optional).
         :param highlight_best: Whether to highlight the best model results.
         """
-        # Switching keys PCA dimensions and hyperparameter
-        # for easier access to result of each hyperparameter
+        # Switching keys PCA dimensions and hyperparameter for easier access to result of each hyperparameter
         inverted_dict = {
             k: {k2: v2[k] for k2, v2 in self.results().items()}
             for k in self.results()[list(self.results().keys())[0]]
         }
 
         for param, dim in inverted_dict.items():
-            x = []  # PCA dimensions
-            y = []  # result
-
-            for n, res in dim.items():
-                x.append(n)
-                y.append(res[result])
+            x = list(dim.keys())  # PCA dimensions
+            y = [res[result] for res in dim.values()]  # result
 
             # Create a new Axes instance if ax is not provided
             if ax is None:
@@ -321,13 +237,10 @@ class ClusteringModel(ABC):
             else:
                 ax.plot(x, y, '-o', label=f'{param}')
 
+        # Highlight best model for each PCA dimension
         if highlight_best:
-            # Overlay lines from self.results_bestmodels (second subplot)
-            x2 = []
-            y2 = []
-            for n2, res2 in self.results_bestmodels().items():
-                x2.append(str(n2))
-                y2.append(res2[result])
+            x2 = list(self.results_bestmodels().keys())
+            y2 = [res2[result] for res2 in self.results_bestmodels().values()]
             ax.plot(x2, y2, 'o', markersize=12, color='gold', label='Best Model')
 
         # Set the x and y-axis labels
@@ -337,22 +250,7 @@ class ClusteringModel(ABC):
         plt.ylabel(y_label)
 
         # Add legend
-        if ax is not None:
-            ax.legend(bbox_to_anchor=(1, 1), title=self.hyperparameter_name, loc='upper left', borderaxespad=0.)
-
-        # Save the plot
-        if save:
-            if not os.path.exists(get_images_dir()):
-                os.mkdir(get_images_dir())
-            if ax is None:
-                file_name = os.path.join(get_images_dir(), f"{file_name}.png")
-            else:
-                file_name = os.path.join(get_images_dir(), f"{file_name}_highlighted.png")
-            plt.savefig(file_name)
-
-        # Show the plot
-        if ax is None:
-            plt.show()
+        ax.legend(bbox_to_anchor=(1, 1), title=self.hyperparameter_name, loc='upper left', borderaxespad=0.)
 
     def _plot_with_highlight(self, title: str, result: str, y_label: str, highlight_best=False,
                              save: bool = False, file_name: str = 'plot'):
@@ -365,24 +263,23 @@ class ClusteringModel(ABC):
         :param save: Whether to save the plots as images.
         :type file_name: File name to save as.
         """
-        fig, axs = plt.subplots(1, 2, figsize=(15, 6))
+        fig, axs = plt.subplots(1, 2, figsize=(16, 6))
 
         # Plot with original results
-        self._plot(title=title, result=result, y_label=y_label, ax=axs[0], highlight_best=False,
-                   save=False, file_name=file_name)
+        self._plot(title=title, result=result, y_label=y_label, ax=axs[0], highlight_best=False)
 
         # Plot with best model results highlighted
-        self._plot(title="Best Model "+title, result=result, y_label=y_label, ax=axs[1], highlight_best=highlight_best,
-                   save=False, file_name=file_name)
+        self._plot(title="Best Model "+title, result=result, y_label=y_label, ax=axs[1], highlight_best=highlight_best)
 
         plt.tight_layout()
 
-        if save: #todo 2 save for modularity?
+        if save:
             if not os.path.exists(get_images_dir()):
                 os.mkdir(get_images_dir())
-            file_name = os.path.join(get_images_dir(), f"{file_name}_highlighted.png")
+            file_name = os.path.join(get_images_dir(), f"{file_name}.png")
             plt.savefig(file_name)
 
+        # Show the plot
         plt.show()
 
     def plot_score_with_highlight(self, save=False):
