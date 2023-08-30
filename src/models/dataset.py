@@ -16,7 +16,7 @@ from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import MinMaxScaler
 
 from src.utilities.utils import get_dataset_dir, get_images_dir
-# from assignment_3.clustering.utils import digits_histogram, plot_digit, plot_mean_digit, plot_cluster_frequencies_histo
+from src.utilities.plot_clusters import digits_histogram, plot_digit, plot_mean_digit, plot_cluster_frequencies_histo
 
 """
 
@@ -168,7 +168,7 @@ class Dataset:
 
 # CLUSTER DATA SPLIT
 
-# class DataClusterSplit:
+# class DataClusterSplit: # TODO
 #     """
 #     Provide an interface to split a dataset given clustering index
 #     """

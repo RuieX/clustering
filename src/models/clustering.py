@@ -3,6 +3,9 @@ import time
 import copy
 import json
 import pickle
+import random
+import numpy as np
+import pandas as pd
 import matplotlib.pyplot as plt
 import seaborn as sns
 
@@ -208,6 +211,8 @@ class ClusteringModel(ABC):
         self._best_model = best_model
         self._evaluated = True
 
+    # LINE PLOT
+
     def _plot(self, title: str, result: str, y_label: str, ax=None, highlight_best=False):
         """
         Generate a line plot PCA dimension vs a result metric (score/number of clusters/time)
@@ -317,6 +322,64 @@ class ClusteringModel(ABC):
                                   highlight_best=True,
                                   save=save,
                                   file_name=f'{self.model_name}_time')
+
+    # SCATTER PLOT
+
+    def plot_clusters(self):  # TODO: IDK IF IT WORKS NEED TO TRY WITH ACTUAL RESULTS
+        """
+        Function that plots the clustering of PCA dimension 2.
+
+        Args:
+            model_name (str): name of the model.
+            fitted_estimator_PCA2 (Union[GaussianMixture,MeanShift,SpectralClustering]): fitted model to use.
+        """
+        data_try = self.data.make_pca(n_comps=self.best_model()["n_components"]).rescale()
+        fitted_estimator_PCA2 : ModelType = self.best_model()["model"]
+
+        data_pca = pd.DataFrame(data_try.x, columns=["PC_"+str(x) for x in range(1, self.best_model()["n_components"]+1)])
+
+        match self.model_name:
+            case "GaussianMixture":
+                labels = fitted_estimator_PCA2.predict(data_pca)
+                n_clusters_ = fitted_estimator_PCA2.get_params()["n_components"]
+                cluster_centers = fitted_estimator_PCA2.means_
+
+            case "MeanShift":
+                labels = fitted_estimator_PCA2.labels_
+                n_clusters_ = len(np.unique(labels))
+                cluster_centers = fitted_estimator_PCA2.cluster_centers_
+
+            case "NormalizedCut":
+                labels = fitted_estimator_PCA2.labels_
+                n_clusters_ = fitted_estimator_PCA2.get_params()["n_clusters"]
+                cluster_centers = None
+
+            case _:
+                print("Wrong model name...")
+                return
+
+        plt.figure(figsize=(20, 10))
+        plt.clf()
+
+        cmap = plt.cm.get_cmap('rainbow', n_clusters_)
+        colors = cmap(range(n_clusters_))
+        markers = plt.Line2D.filled_markers
+
+        for k, col, marker in zip(range(n_clusters_), colors, markers):
+            my_members = labels == k
+
+            plt.scatter(data_pca[my_members]["PC_1"], data_pca[my_members]["PC_2"], marker=marker,
+                        color=col)
+
+            if cluster_centers is not None:
+                cluster_center = cluster_centers[k]
+            else:
+                cluster_center = data_pca[my_members].mean()
+
+            plt.scatter(cluster_center[0], cluster_center[1], marker=marker, edgecolor="black", s=200, color=col)
+
+        plt.title("Estimated number of clusters: %d" % n_clusters_)
+        plt.show()
 
 
 # MEAN SHIFT
