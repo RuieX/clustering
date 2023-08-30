@@ -229,7 +229,7 @@ class ClusteringModel(ABC):
         }
 
         for param, dim in inverted_dict.items():
-            x = list(dim.keys())  # PCA dimensions
+            x = [float(n) for n in dim.keys()]  # PCA dimensions
             y = [res[result] for res in dim.values()]  # result
 
             # Create a new Axes instance if ax is not provided
@@ -244,7 +244,7 @@ class ClusteringModel(ABC):
 
         # Highlight best model for each PCA dimension
         if highlight_best:
-            x2 = list(self.results_bestmodels().keys())
+            x2 = [float(n) for n in self.results_bestmodels().keys()]
             y2 = [res2[result] for res2 in self.results_bestmodels().values()]
             ax.plot(x2, y2, 'o', markersize=12, color='gold', label='Best Model')
 
@@ -323,9 +323,9 @@ class ClusteringModel(ABC):
                                   save=save,
                                   file_name=f'{self.model_name}_time')
 
-    # SCATTER PLOT
+    # SCATTER PLOT # todo delete because i can't make it work
 
-    def plot_clusters(self):  # TODO: IDK IF IT WORKS NEED TO TRY WITH ACTUAL RESULTS
+    def plot_clusters(self):
         """
         Function that plots the clustering of PCA dimension 2.
 
@@ -333,32 +333,29 @@ class ClusteringModel(ABC):
             model_name (str): name of the model.
             fitted_estimator_PCA2 (Union[GaussianMixture,MeanShift,SpectralClustering]): fitted model to use.
         """
-        data_try = self.data.make_pca(n_comps=self.best_model()["n_components"]).rescale()
-        fitted_estimator_PCA2 : ModelType = self.best_model()["model"]
-
-        data_pca = pd.DataFrame(data_try.x, columns=["PC_"+str(x) for x in range(1, self.best_model()["n_components"]+1)])
+        best_model_info = self.best_model()
+        num_components = best_model_info["n_components"]
+        data = self.data.make_pca(n_comps=num_components).rescale()
+        best_model: ModelType = best_model_info["model"]
 
         match self.model_name:
             case "GaussianMixture":
-                labels = fitted_estimator_PCA2.predict(data_pca)
-                n_clusters_ = fitted_estimator_PCA2.get_params()["n_components"]
-                cluster_centers = fitted_estimator_PCA2.means_
-
+                labels = best_model.predict(data.x)
+                n_clusters_ = best_model.get_params()["n_components"]
+                cluster_centers = best_model.means_
             case "MeanShift":
-                labels = fitted_estimator_PCA2.labels_
+                labels = best_model.labels_
                 n_clusters_ = len(np.unique(labels))
-                cluster_centers = fitted_estimator_PCA2.cluster_centers_
-
+                cluster_centers = best_model.cluster_centers_
             case "NormalizedCut":
-                labels = fitted_estimator_PCA2.labels_
-                n_clusters_ = fitted_estimator_PCA2.get_params()["n_clusters"]
+                labels = best_model.labels_
+                n_clusters_ = best_model.get_params()["n_clusters"]
                 cluster_centers = None
-
             case _:
                 print("Wrong model name...")
                 return
 
-        plt.figure(figsize=(20, 10))
+        plt.figure(figsize=(16, 6))
         plt.clf()
 
         cmap = plt.cm.get_cmap('rainbow', n_clusters_)
@@ -366,15 +363,14 @@ class ClusteringModel(ABC):
         markers = plt.Line2D.filled_markers
 
         for k, col, marker in zip(range(n_clusters_), colors, markers):
-            my_members = labels == k
+            cls_members = labels == k
 
-            plt.scatter(data_pca[my_members]["PC_1"], data_pca[my_members]["PC_2"], marker=marker,
-                        color=col)
+            plt.scatter(data.x[cls_members].iloc[:, 0], data.x[cls_members].iloc[:, 1], marker=marker, color=col)
 
             if cluster_centers is not None:
                 cluster_center = cluster_centers[k]
             else:
-                cluster_center = data_pca[my_members].mean()
+                cluster_center = data.x[cls_members].mean()
 
             plt.scatter(cluster_center[0], cluster_center[1], marker=marker, edgecolor="black", s=200, color=col)
 
