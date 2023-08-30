@@ -8,9 +8,14 @@ import os
 import numpy as np
 import pandas as pd
 
-from typing import List, Dict
+from random import sample
+from typing import Dict, List, Tuple
 from matplotlib import pyplot as plt
+from statistics import mean, mode
+from sklearn.metrics import rand_score
 
+from src.models.dataset import Dataset
+from src.models.clustering import ModelType
 from src.utilities.utils import get_images_dir
 
 
@@ -31,7 +36,7 @@ def chunks(lst: List, n: int) -> np.array:
 
     list_len = len(lst)
 
-    # list length must me a multiple of the required length for sublist
+    # list length must be a multiple of the required length for sublist
     if list_len % n != 0:
         raise Exception(f"Cannot split list of {list_len} in {n} rows")
 
@@ -145,3 +150,207 @@ def plot_cluster_frequencies_histo(frequencies: Dict[int, int],
         print(f"Saving {out_file} ")
         plt.savefig(out_file)
     plt.show()
+
+
+# CLUSTER DATA SPLIT
+
+class DataClusterSplit:
+    """
+    Provide an interface to split a dataset given clustering index
+    """
+
+    def __init__(self, data: Dataset, best_model: ModelType, model_name: str):
+        """
+        get clustering index
+        :param data: dataset to be split
+        :param best_model:
+        :param model_name:
+        """
+        self.data: Dataset = data
+        self._best_model: ModelType = best_model
+        self._model_name: str = model_name
+        labels = self._get_labels()
+        self._clusters: Dict[int, Dataset] = self._split_dataset(index=labels)
+
+        # materialized view of cluster actual_label - true_label for score evaluation
+        self._cluster_idx, self._true_label = self._materialize_indexes()
+
+    # DUNDER todo
+
+    def __str__(self) -> str:
+        """
+        Return string representation for the object:
+        :return: stringify Data Clustering Split
+        """
+        return f"ClusterDataSplit [Data: {self.total_instances}, Clusters: {self.n_cluster}, " \
+               f"Mean-per-Cluster: {self.mean_cardinality:.3f}, Score: {self.rand_index_score:.3f}] "
+
+    # STATS
+
+    def clusters(self) -> Dict[int, Dataset]:
+        """
+        Return dataset split by clusters in format cluster_id : cluster data
+        :return: data split in cluster
+        """
+        return self._clusters
+
+    def n_cluster(self) -> int:
+        """
+        Returns the number of clusters found
+        :return: number of clusters
+        """
+        return len(self.clusters())
+
+    def clusters_cardinality(self) -> Dict[int, int]:
+        """
+        Return the number of objects for each cluster
+        :return: mapping cluster_id : number of elements
+        """
+        return {k: len(v) for k, v in self.clusters().items()}
+
+    def total_instances(self) -> int:
+        """
+        Returns the total number of points among all clusters
+        :return: total number of instances among all clusters
+        """
+        return sum(self.clusters_cardinality().values())
+
+    def clusters_frequencies(self) -> Dict[int, int]:
+        """
+        Return the frequencies of cluster cardinality
+        :return: cluster cardinality frequencies
+        """
+        lengths = list(self.clusters_cardinality().values())
+        return {x: lengths.count(x) for x in lengths}
+
+    def mean_cardinality(self) -> float:
+        """
+        Return average cluster cardinality
+        :return: average cluster cardinality
+        """
+        return mean(self.clusters_cardinality().values())
+
+    def _split_dataset(self, index: np.ndarray) -> Dict[int, Dataset]:
+        """
+        Split the Dataset in multiple given a certain index
+        :param index: indexes for split
+        :return: dataset split according to index
+        """
+        values = list(set(index))  # get unique values
+        return {
+            v: Dataset(
+                x=self.data.x[index == v].reset_index(drop=True),
+                y=self.data.y[index == v]
+            )
+            for v in values
+        }
+
+    def _get_labels(self):
+        """
+
+        :return:
+        """
+        match self._model_name:
+            case "GaussianMixture":
+                labels = self._best_model.predict(self.data.x)
+                # n_clusters_ = best_model.get_params()["n_components"]
+                # cluster_centers = best_model.means_
+            case "MeanShift":
+                labels = self._best_model.labels_
+                # n_clusters_ = len(np.unique(labels))
+                # cluster_centers = best_model.cluster_centers_
+            case "NormalizedCut":
+                labels = self._best_model.labels_
+                # n_clusters_ = best_model.get_params()["n_clusters"]
+                # cluster_centers = None
+            case _:
+                print("The model can only be GaussianMixture, MeanShift, or NormalizedCut")
+                return
+        return labels
+
+    # ALTER THE CLUSTER
+    def get_sub_clusters(self, a: int | None = None, b: int | None = None) -> "DataClusterSplit":
+        """
+        Returns a new DataClusterSplit with cluster cardinalities in the given range [a, b].
+
+        Args:
+            a (int | None): Cardinality lower bound. Default is 0 if not given.
+            b (int | None): Cardinality upper bound. Default is maximum cardinality if not given.
+
+        Returns:
+            DataClusterSplit: New instance with filtered clusters.
+        """
+        if a is None:
+            a = 0
+        if b is None:
+            b = max(self.clusters_cardinality().values())
+
+        filtered_clusters = {
+            k: v for k, v in self.clusters().items()
+            if a <= len(v) <= b
+        }
+
+        # Create a new DataClusterSplit instance with filtered clusters
+        filtered_dcs = DataClusterSplit(
+            data=Dataset(x=pd.DataFrame([0]), y=np.array([0])),
+            best_model=self._best_model,
+            model_name=self._model_name
+        )
+        # dcs = DataClusterSplit(  # generating new fake DataClusterSplit
+        #     data=Dataset(x=pd.DataFrame([0]), y=np.array([0])),
+        #     index=np.array([0])
+        # )
+        filtered_dcs._clusters = filtered_clusters
+        filtered_dcs._cluster_idx, filtered_dcs._true_label = filtered_dcs._materialize_indexes()
+
+        return filtered_dcs
+
+    # SCORE
+
+    def _materialize_indexes(self) -> Tuple[List[int], List[int]]:
+        """
+        Provides list of clusters and corresponding labels to evaluate scores
+        """
+        cluster_idx = [item for sublist in [
+            [idx] * len(data) for idx, data in self.clusters().items()
+        ] for item in sublist]
+
+        true_labels = np.concatenate([
+            data.y for _, data in self.clusters().items()
+        ]).ravel().tolist()
+
+        return cluster_idx, true_labels
+
+    def rand_index_score(self) -> float:
+        """
+        :return: clustering rand index score
+        """
+        return rand_score(labels_true=self._true_label, labels_pred=self._cluster_idx)
+
+    # PLOTS
+
+    def plot_frequencies_histo(self, save: bool = False, file_name: str = 'frequencies'):
+        """
+        Plot frequencies in a histogram
+        :save: if to save the graph to images directory
+        :file_name: name of stored file
+        """
+
+        plot_cluster_frequencies_histo(frequencies=self.clusters_frequencies(), save=save, file_name=file_name)
+
+    def plot_mean_digit(self, sample_out: int | None = None):
+        """
+        Plots mean digit foreach cluster
+        :param sample_out: number of elements to print uniformly sampled
+        """
+
+        vals = list(self.clusters().values())
+
+        if sample_out is not None:
+            vals = sample(vals, sample_out)
+
+        for c in vals:
+            freq = {x: list(c.y).count(x) for x in c.y}
+            freq = dict(sorted(freq.items(), key=lambda x: -x[1]))  # sort by values
+            print(f"[Mode {mode(c.y)}: {freq}] ")
+            plot_mean_digit(X=c.x)

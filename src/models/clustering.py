@@ -211,7 +211,7 @@ class ClusteringModel(ABC):
         self._best_model = best_model
         self._evaluated = True
 
-    # LINE PLOT
+    # PLOT
 
     def _plot(self, title: str, result: str, y_label: str, ax=None, highlight_best=False):
         """
