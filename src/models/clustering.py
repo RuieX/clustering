@@ -16,11 +16,12 @@ from tqdm.notebook import tqdm_notebook
 from sklearn.cluster import MeanShift, SpectralClustering
 from sklearn.mixture import GaussianMixture
 from sklearn.metrics import rand_score, confusion_matrix
+from sklearn.decomposition import PCA
+from collections import Counter
 from IPython.display import display
 
 from src.models.dataset import Dataset
 from src.utilities.utils import get_results_dir, get_images_dir
-from src.utilities.settings import RANDOM_SEED
 
 
 ModelType = TypeVar("ModelType", MeanShift, SpectralClustering, GaussianMixture)
@@ -324,7 +325,7 @@ class ClusteringModel(ABC):
                                   file_name=f'{self.model_name}_time')
 
 
-def _get_labels(data: Dataset, model_name: str, best_model_info: dict):
+def _get_labels(data: Dataset, model_name: str, best_model_info: dict):  # todo description
     """
 
     :return:
@@ -408,7 +409,7 @@ def plot_cluster_composition(data: Dataset, model_name: str, best_model_info: di
     cluster_probabilities = confusion / confusion.sum(axis=1, keepdims=True)
 
     if model_name == "MeanShift":
-        cluster_df = pd.DataFrame(cluster_probabilities[:, :10])  # Transpose for digits as columns
+        cluster_df = pd.DataFrame(cluster_probabilities[:, :10])
         cluster_df = cluster_df.applymap(lambda x: f'{x:.3f}')
         cluster_df.columns = [f'Digit {i}' for i in range(0, 10)]
         cluster_df.index.name = "Cluster"
@@ -421,45 +422,70 @@ def plot_cluster_composition(data: Dataset, model_name: str, best_model_info: di
         plt.title('Cluster Composition Analysis (Probabilities)')
         plt.show()
 
-        # TODO print how many datapoints each cluster take?
+    # Calculate percentage of clusters focused on each digit (0 to 9)
+    digit_focus = (cluster_probabilities[:, :10] >= 0.5).mean(axis=0) * 100  # set to 50%
+    underperforming_percentage = 100 - digit_focus.sum()
+
+    print("Percentage of clusters focused on each digit:")
+    for digit, percentage in enumerate(digit_focus):
+        print(f"For digit {digit}: {percentage:.3f}%")
+
+    print(f"Clusters underperforming (distributed across multiple digits): {underperforming_percentage:.3f}%")
 
 
-# def prima_questo_loop_sotto(): # TODO
-#     # Loop over clusters and visualize images for each cluster
-#     for cluster_id in range(num_clusters):  # Update num_clusters accordingly
-#         cluster_indices = np.where(best_labels == cluster_id)[0]
-#         cluster_data = data.x[cluster_indices]
-#
-#         visualize_reconstructed_images(cluster_data, pca)
-#
-#
-# def visualize_reconstructed_images():
+# todo this worked but has errors
+# def plot_reconstructed_images(data: Dataset, model_name: str, best_model_info: dict):
 #     """
 #     you can visualize the reconstructed images by using the original data points that belong to each cluster.
 #     you can find the data points that belong to a specific cluster using the cluster labels obtained from the best model.
 #     Then, you can use PCA's inverse transform to obtain the original data points in the original feature space and display them.
 #     :return:
 #     """
-#     from sklearn.decomposition import PCA
+#     best_labels = _get_labels(data=data, model_name=model_name, best_model_info=best_model_info)
 #
 #     # Assuming data.x is your original dataset
 #     pca = PCA(n_components=best_model_info['n_components'])
-#     data_pca = pca.fit_transform(data.x)
+#     pca.fit(data.x)
+#     data_pca = pca.transform(data.x)  # Use transform instead of fit_transform
 #
-#     # Extract and visualize data points for a specific cluster
-#     cluster_id = 0  # Change this to the desired cluster ID
-#     cluster_indices = np.where(best_labels == cluster_id)[0]
-#     cluster_data = data.x[cluster_indices]  # Extract original data points
+#     unique_clusters = np.unique(best_labels)
 #
-#     # Perform PCA inverse transform to get original data points
-#     original_data_points = pca.inverse_transform(cluster_data)
+#     max_clusters_to_visualize = 20  # Set the maximum number of clusters to visualize
 #
-#     # Visualize the reconstructed images
-#     n_images_to_display = 10  # Change this based on your preference
-#     fig, axes = plt.subplots(1, n_images_to_display, figsize=(10, 2))
+#     # Loop over clusters and visualize images for each cluster
+#     for idx, cluster_id in enumerate(unique_clusters):
+#         if idx >= max_clusters_to_visualize:
+#             print(f"Cluster visualization limit reached. Remaining clusters won't be displayed.")
+#             break
 #
-#     for i, ax in enumerate(axes):
-#         ax.imshow(original_data_points[i].reshape(28, 28), cmap='gray')
-#         ax.axis('off')
+#         cluster_indices = np.where(best_labels == cluster_id)[0]
+#         cluster_data = data_pca[cluster_indices]  # Extract original data points
 #
-#     plt.show()
+#         # Perform PCA inverse transform to get original data points
+#         original_data_points = pca.inverse_transform(cluster_data)
+#
+#         # Select a random subset of data points to display
+#         n_images_to_display = min(5, len(cluster_data))  # Limit to the number of available images
+#         random_indexes = random.sample(range(len(cluster_data)), n_images_to_display)
+#         random_data = cluster_data[random_indexes]
+#
+#         # Perform PCA inverse transform on the random subset to get original data points
+#         random_original_data_points = pca.inverse_transform(random_data)
+#
+#         # Visualize the reconstructed images
+#         fig, axes = plt.subplots(1, n_images_to_display, figsize=(10, 2))
+#
+#         for i, ax in enumerate(axes):
+#             ax.imshow(random_original_data_points[i].reshape(28, 28), cmap='gray')
+#             ax.axis('off')
+#
+#         plt.suptitle(f"Cluster {cluster_id}: Recognized Digit = {_most_common_digit(best_labels)}", fontsize=16)
+#         plt.show()
+#
+#
+# def _most_common_digit(data):
+#     digit_counts = Counter(data)
+#     mc_digit = digit_counts.most_common(1)[0][0]
+#     return mc_digit
+
+
