@@ -16,6 +16,7 @@ from tqdm.notebook import tqdm_notebook
 from sklearn.cluster import MeanShift, SpectralClustering
 from sklearn.mixture import GaussianMixture
 from sklearn.metrics import rand_score, confusion_matrix
+from IPython.display import display
 
 from src.models.dataset import Dataset
 from src.utilities.utils import get_results_dir, get_images_dir
@@ -404,17 +405,29 @@ def plot_cluster_composition(data: Dataset, model_name: str, best_model_info: di
     """
     best_labels = _get_labels(data=data, model_name=model_name, best_model_info=best_model_info)
     actual_labels = data.y  # Assuming data_pca.y are the true digit labels
-    confusion = confusion_matrix(actual_labels, best_labels)
+    confusion = confusion_matrix(best_labels, actual_labels)
 
-    plt.figure(figsize=(10, 8))
-    sns.heatmap(confusion, annot=True, fmt='d', cmap='Blues', square=True)
-    plt.xlabel('Cluster')
-    plt.ylabel('Actual Digit')
-    plt.title('Cluster Composition Analysis')
-    plt.show()
+    # Normalize the confusion matrix to get probabilities
+    cluster_probabilities = confusion / confusion.sum(axis=1, keepdims=True)
+
+    if model_name == "MeanShift":
+        cluster_df = pd.DataFrame(cluster_probabilities[:, :10])  # Transpose for digits as columns
+        cluster_df = cluster_df.applymap(lambda x: f'{x:.3f}')
+        cluster_df.columns = [f'Digit {i}' for i in range(0, 10)]
+        cluster_df.index.name = "Cluster"
+        display(cluster_df)
+    else:
+        plt.figure(figsize=(18, 10))
+        sns.heatmap(cluster_probabilities[:, :10], annot=True, fmt=".3f", cmap='Blues', square=True)
+        plt.xlabel('Actual Digit')
+        plt.ylabel('Cluster')
+        plt.title('Cluster Composition Analysis (Probabilities)')
+        plt.show()
+
+        # TODO print how many datapoints each cluster take?
 
 
-# def prima_questo_loop_sotto():
+# def prima_questo_loop_sotto(): # TODO 
 #     # Loop over clusters and visualize images for each cluster
 #     for cluster_id in range(num_clusters):  # Update num_clusters accordingly
 #         cluster_indices = np.where(best_labels == cluster_id)[0]
