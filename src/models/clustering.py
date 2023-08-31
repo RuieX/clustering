@@ -18,6 +18,8 @@ from sklearn.mixture import GaussianMixture
 from sklearn.metrics import rand_score, confusion_matrix
 from sklearn.decomposition import PCA
 from collections import Counter
+from random import sample
+from statistics import mean, mode
 from IPython.display import display
 
 from src.models.dataset import Dataset
@@ -433,59 +435,75 @@ def plot_cluster_composition(data: Dataset, model_name: str, best_model_info: di
     print(f"Clusters underperforming (distributed across multiple digits): {underperforming_percentage:.3f}%")
 
 
-# todo this worked but has errors
-# def plot_reconstructed_images(data: Dataset, model_name: str, best_model_info: dict):
-#     """
-#     you can visualize the reconstructed images by using the original data points that belong to each cluster.
-#     you can find the data points that belong to a specific cluster using the cluster labels obtained from the best model.
-#     Then, you can use PCA's inverse transform to obtain the original data points in the original feature space and display them.
-#     :return:
-#     """
-#     best_labels = _get_labels(data=data, model_name=model_name, best_model_info=best_model_info)
-#
-#     # Assuming data.x is your original dataset
-#     pca = PCA(n_components=best_model_info['n_components'])
-#     pca.fit(data.x)
-#     data_pca = pca.transform(data.x)  # Use transform instead of fit_transform
-#
-#     unique_clusters = np.unique(best_labels)
-#
-#     max_clusters_to_visualize = 20  # Set the maximum number of clusters to visualize
-#
-#     # Loop over clusters and visualize images for each cluster
-#     for idx, cluster_id in enumerate(unique_clusters):
-#         if idx >= max_clusters_to_visualize:
-#             print(f"Cluster visualization limit reached. Remaining clusters won't be displayed.")
-#             break
-#
-#         cluster_indices = np.where(best_labels == cluster_id)[0]
-#         cluster_data = data_pca[cluster_indices]  # Extract original data points
-#
-#         # Perform PCA inverse transform to get original data points
-#         original_data_points = pca.inverse_transform(cluster_data)
-#
-#         # Select a random subset of data points to display
-#         n_images_to_display = min(5, len(cluster_data))  # Limit to the number of available images
-#         random_indexes = random.sample(range(len(cluster_data)), n_images_to_display)
-#         random_data = cluster_data[random_indexes]
-#
-#         # Perform PCA inverse transform on the random subset to get original data points
-#         random_original_data_points = pca.inverse_transform(random_data)
-#
-#         # Visualize the reconstructed images
-#         fig, axes = plt.subplots(1, n_images_to_display, figsize=(10, 2))
-#
-#         for i, ax in enumerate(axes):
-#             ax.imshow(random_original_data_points[i].reshape(28, 28), cmap='gray')
-#             ax.axis('off')
-#
-#         plt.suptitle(f"Cluster {cluster_id}: Recognized Digit = {_most_common_digit(best_labels)}", fontsize=16)
-#         plt.show()
-#
-#
-# def _most_common_digit(data):
-#     digit_counts = Counter(data)
-#     mc_digit = digit_counts.most_common(1)[0][0]
-#     return mc_digit
+def plot_reconstructed_images(data: Dataset, model_name: str, best_model_info: dict):
+    """
+    you can visualize the reconstructed images by using the original data points that belong to each cluster.
+    you can find the data points that belong to a specific cluster using the cluster labels obtained from the best model.
+    Then, you can use PCA's inverse transform to obtain the original data points in the original feature space and display them.
+    :return:
+    """
+    best_labels = _get_labels(data=data, model_name=model_name, best_model_info=best_model_info)
+
+    # Assuming data.x is your original dataset
+    pca = PCA(n_components=best_model_info['n_components'])
+    pca.fit(data.x)
+    data_pca = pca.transform(data.x)  # Use transform instead of fit_transform
+
+    unique_clusters = np.unique(best_labels)
+
+    max_clusters_to_visualize = 20  # Set the maximum number of clusters to visualize
+
+    # Loop over clusters and visualize images for each cluster
+    for idx, cluster_id in enumerate(unique_clusters):
+        if idx >= max_clusters_to_visualize:
+            print(f"Cluster visualization limit reached. Remaining clusters won't be displayed.")
+            break
+
+        cluster_indices = np.where(best_labels == cluster_id)[0]
+        cluster_data = data_pca[cluster_indices]  # Extract original data points
+
+        # Select a random subset of data points to display
+        n_images_to_display = min(5, len(cluster_data))  # Limit to the number of available images
+        random_indexes = random.sample(range(len(cluster_data)), n_images_to_display)
+        random_data = cluster_data[random_indexes]
+
+        # Perform PCA inverse transform on the random subset to get original data points
+        random_original_data_points = pca.inverse_transform(random_data)
+
+        # Visualize the reconstructed images
+        fig, axes = plt.subplots(1, n_images_to_display, figsize=(10, 2))
+
+        for i, ax in enumerate(axes):
+            ax.imshow(random_original_data_points[i].reshape(28, 28), cmap='gray')
+            ax.axis('off')
+
+        plt.suptitle(f"Cluster {cluster_id}", fontsize=16)
+        plt.show()
 
 
+def visualize_model_means(data: Dataset, model_name: str, best_model_info: dict):
+    best_labels = _get_labels(data=data, model_name=model_name, best_model_info=best_model_info)
+
+    # Assuming data.x is your original dataset
+    pca = PCA(n_components=best_model_info['n_components'])
+    pca.fit(data.x)
+    data_pca = pca.transform(data.x)  # Use transform instead of fit_transform
+
+    unique_clusters = np.unique(best_labels)
+
+    for cluster_id in unique_clusters:
+        cluster_indices = np.where(best_labels == cluster_id)[0]
+        cluster_data_pca = data_pca[cluster_indices]  # Extract transformed data points
+
+        # Calculate the mean of transformed data points for the current cluster
+        cluster_mean = np.mean(cluster_data_pca, axis=0)
+
+        # Perform PCA inverse transform on the mean to get the reconstructed mean
+        reconstructed_mean = pca.inverse_transform(cluster_mean)
+
+        # Visualize the reconstructed mean as a grayscale image
+        plt.figure(figsize=(4, 4))
+        plt.imshow(reconstructed_mean.reshape(28, 28), cmap='gray')
+        plt.title(f"Cluster {cluster_id} Mean")
+        plt.axis('off')
+        plt.show()
