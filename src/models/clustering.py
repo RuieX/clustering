@@ -15,7 +15,7 @@ from tqdm import tqdm
 from tqdm.notebook import tqdm_notebook
 from sklearn.cluster import MeanShift, SpectralClustering
 from sklearn.mixture import GaussianMixture
-from sklearn.metrics import rand_score
+from sklearn.metrics import rand_score, confusion_matrix
 
 from src.models.dataset import Dataset
 from src.utilities.utils import get_results_dir, get_images_dir
@@ -323,6 +323,140 @@ class ClusteringModel(ABC):
                                   save=save,
                                   file_name=f'{self.model_name}_time')
 
+#  TODO move these functions
+
+
+def _get_labels(data: Dataset, model_name: str, best_model_info: dict):
+    """
+
+    :return:
+    """
+    num_components = best_model_info["n_components"]
+    data = data.make_pca(n_comps=num_components).rescale()
+    best_model: ModelType = best_model_info["model"]
+
+    match model_name:
+        case "GaussianMixture":
+            labels = best_model.fit_predict(data.x)
+        case "MeanShift":
+            labels = best_model.labels_
+        case "NormalizedCut":
+            labels = best_model.labels_
+        case _:
+            print("The model can only be GaussianMixture, MeanShift, or NormalizedCut")
+            return
+    return labels
+
+
+def plot_cluster_frequencies(data: Dataset, model_name: str, best_model_info: dict):
+    """
+
+    :param data:
+    :param model_name:
+    :param best_model_info:
+    :return:
+    """
+    labels = _get_labels(data=data, model_name=model_name, best_model_info=best_model_info)
+
+    # Determine the number of unique clusters
+    n_clusters = len(set(labels))
+    max_clusters = 20
+    # Sort the labels in descending order
+    sorted_labels = sorted(labels, reverse=True)
+
+    cmap = plt.cm.get_cmap('tab20')
+    plt.figure(figsize=(16, 6))
+
+    if n_clusters <= max_clusters:
+        for i in range(n_clusters):
+            cls_labels = [label for label in labels if label == i]
+            color = i % cmap.N  # Calculate color index using modulo to rotate colors
+            plt.hist(cls_labels, bins=[i-0.5 for i in range(n_clusters + 1)], color=cmap(color), label=f'Cluster {i}')
+    else:
+        # Plot the highest 49 clusters
+        for i in range(max_clusters - 1):
+            cls_labels = [label for label in sorted_labels if label == i]
+            color = i % cmap.N
+            plt.hist(cls_labels, bins=[i - 0.5 for i in range(max_clusters)], color=cmap(color), label=f'Cluster {i}')
+
+        # Plot the "Others" cluster
+        other_clusters = [label for label in sorted_labels if label >= max_clusters - 1]
+        color = (max_clusters - 1) % cmap.N
+        plt.hist(other_clusters, bins=[max_clusters-1-0.5, max_clusters-0.5], color=cmap(color), label='Others')
+
+    plt.xlabel('Cluster')
+    plt.ylabel('Frequency')
+    plt.title(f'Cluster Frequencies: {n_clusters} clusters')
+    # Move the legend outside the plot
+    plt.legend(bbox_to_anchor=(1.05, 1), loc='upper left')
+    plt.tight_layout()  # Adjust spacing for better layout
+    plt.show()
+
+
+def plot_cluster_composition(data: Dataset, model_name: str, best_model_info: dict):
+    """
+    You'll need to compare the cluster assignments with the actual digit labels to perform a composition analysis.
+    You can create a confusion matrix to see how well the clusters match with the actual digits.
+
+    You can analyze the rows of the confusion matrix to identify which digit each cluster recognizes best.
+    The index with the highest count in each row corresponds to the digit that the cluster seems to recognize best.
+    :return:
+    """
+    best_labels = _get_labels(data=data, model_name=model_name, best_model_info=best_model_info)
+    actual_labels = data.y  # Assuming data_pca.y are the true digit labels
+    confusion = confusion_matrix(actual_labels, best_labels)
+
+    plt.figure(figsize=(10, 8))
+    sns.heatmap(confusion, annot=True, fmt='d', cmap='Blues', square=True)
+    plt.xlabel('Cluster')
+    plt.ylabel('Actual Digit')
+    plt.title('Cluster Composition Analysis')
+    plt.show()
+
+
+# def prima_questo_loop_sotto():
+#     # Loop over clusters and visualize images for each cluster
+#     for cluster_id in range(num_clusters):  # Update num_clusters accordingly
+#         cluster_indices = np.where(best_labels == cluster_id)[0]
+#         cluster_data = data.x[cluster_indices]
+#
+#         visualize_reconstructed_images(cluster_data, pca)
+#
+#
+# def visualize_reconstructed_images():
+#     """
+#     you can visualize the reconstructed images by using the original data points that belong to each cluster.
+#     you can find the data points that belong to a specific cluster using the cluster labels obtained from the best model.
+#     Then, you can use PCA's inverse transform to obtain the original data points in the original feature space and display them.
+#     :return:
+#     """
+#     from sklearn.decomposition import PCA
+#
+#     # Assuming data.x is your original dataset
+#     pca = PCA(n_components=best_model_info['n_components'])
+#     data_pca = pca.fit_transform(data.x)
+#
+#     # Extract and visualize data points for a specific cluster
+#     cluster_id = 0  # Change this to the desired cluster ID
+#     cluster_indices = np.where(best_labels == cluster_id)[0]
+#     cluster_data = data.x[cluster_indices]  # Extract original data points
+#
+#     # Perform PCA inverse transform to get original data points
+#     original_data_points = pca.inverse_transform(cluster_data)
+#
+#     # Visualize the reconstructed images
+#     n_images_to_display = 10  # Change this based on your preference
+#     fig, axes = plt.subplots(1, n_images_to_display, figsize=(10, 2))
+#
+#     for i, ax in enumerate(axes):
+#         ax.imshow(original_data_points[i].reshape(28, 28), cmap='gray')
+#         ax.axis('off')
+#
+#     plt.show()
+
+
+
+
 
 # MEAN SHIFT
 
@@ -390,4 +524,4 @@ class MixtureGaussianEvaluation(ClusteringModel):
         super().__init__(data, n_components, hyperparam_vals)
         self.hyperparameter = self.hyperparameter_name
         self.model_name = self.model
-        self.model_type = GaussianMixture(max_iter=200, random_state=RANDOM_SEED)
+        self.model_type = GaussianMixture(max_iter=1000, random_state=RANDOM_SEED)

@@ -175,15 +175,13 @@ class DataClusterSplit:
         # materialized view of cluster actual_label - true_label for score evaluation
         self._cluster_idx, self._true_label = self._materialize_indexes()
 
-    # DUNDER todo
-
-    def __str__(self) -> str:
-        """
-        Return string representation for the object:
-        :return: stringify Data Clustering Split
-        """
-        return f"ClusterDataSplit [Data: {self.total_instances}, Clusters: {self.n_cluster}, " \
-               f"Mean-per-Cluster: {self.mean_cardinality:.3f}, Score: {self.rand_index_score:.3f}] "
+    # def __str__(self) -> str:
+    #     """
+    #     Return string representation for the object:
+    #     :return: stringify Data Clustering Split
+    #     """
+    #     return f"ClusterDataSplit [Data: {self.total_instances}, Clusters: {self.n_cluster}, " \
+    #            f"Mean-per-Cluster: {self.mean_cardinality:.3f}, Score: {self.rand_index_score:.3f}] "
 
     # STATS
 
@@ -269,41 +267,41 @@ class DataClusterSplit:
         return labels
 
     # ALTER THE CLUSTER
-    def get_sub_clusters(self, a: int | None = None, b: int | None = None) -> "DataClusterSplit":
-        """
-        Returns a new DataClusterSplit with cluster cardinalities in the given range [a, b].
-
-        Args:
-            a (int | None): Cardinality lower bound. Default is 0 if not given.
-            b (int | None): Cardinality upper bound. Default is maximum cardinality if not given.
-
-        Returns:
-            DataClusterSplit: New instance with filtered clusters.
-        """
-        if a is None:
-            a = 0
-        if b is None:
-            b = max(self.clusters_cardinality().values())
-
-        filtered_clusters = {
-            k: v for k, v in self.clusters().items()
-            if a <= len(v) <= b
-        }
-
-        # Create a new DataClusterSplit instance with filtered clusters
-        filtered_dcs = DataClusterSplit(
-            data=Dataset(x=pd.DataFrame([0]), y=np.array([0])),
-            best_model=self._best_model,
-            model_name=self._model_name
-        )
-        # dcs = DataClusterSplit(  # generating new fake DataClusterSplit
-        #     data=Dataset(x=pd.DataFrame([0]), y=np.array([0])),
-        #     index=np.array([0])
-        # )
-        filtered_dcs._clusters = filtered_clusters
-        filtered_dcs._cluster_idx, filtered_dcs._true_label = filtered_dcs._materialize_indexes()
-
-        return filtered_dcs
+    # def get_sub_clusters(self, a: int | None = None, b: int | None = None) -> "DataClusterSplit":
+    #     """
+    #     Returns a new DataClusterSplit with cluster cardinalities in the given range [a, b].
+    #
+    #     Args:
+    #         a (int | None): Cardinality lower bound. Default is 0 if not given.
+    #         b (int | None): Cardinality upper bound. Default is maximum cardinality if not given.
+    #
+    #     Returns:
+    #         DataClusterSplit: New instance with filtered clusters.
+    #     """
+    #     if a is None:
+    #         a = 0
+    #     if b is None:
+    #         b = max(self.clusters_cardinality().values())
+    #
+    #     filtered_clusters = {
+    #         k: v for k, v in self.clusters().items()
+    #         if a <= len(v) <= b
+    #     }
+    #
+    #     # Create a new DataClusterSplit instance with filtered clusters
+    #     filtered_dcs = DataClusterSplit(
+    #         data=Dataset(x=pd.DataFrame([0]), y=np.array([0])),
+    #         best_model=self._best_model,
+    #         model_name=self._model_name
+    #     )
+    #     # dcs = DataClusterSplit(  # generating new fake DataClusterSplit
+    #     #     data=Dataset(x=pd.DataFrame([0]), y=np.array([0])),
+    #     #     index=np.array([0])
+    #     # )
+    #     filtered_dcs._clusters = filtered_clusters
+    #     filtered_dcs._cluster_idx, filtered_dcs._true_label = filtered_dcs._materialize_indexes()
+    #
+    #     return filtered_dcs
 
     # SCORE
 
