@@ -10,17 +10,9 @@ from sklearn.preprocessing import MinMaxScaler
 
 from src.utilities.utils import get_dataset_dir
 
-"""
 
-This module provides basic classes to implement clustering logic
- - Dataset, a class to provide a unique view for data and labels
- - DataClusterSplit, a class to split data into clusters
-
-"""
-
-
-""" DATASET """
-
+# DATASET
+# todo documentation, remove useless functions
 
 class Dataset:
     """

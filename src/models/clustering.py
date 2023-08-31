@@ -23,7 +23,6 @@ from src.utilities.utils import get_results_dir, get_images_dir
 from src.utilities.settings import RANDOM_SEED
 
 
-N_JOBS = -1
 ModelType = TypeVar("ModelType", MeanShift, SpectralClustering, GaussianMixture)
 
 
@@ -324,8 +323,6 @@ class ClusteringModel(ABC):
                                   save=save,
                                   file_name=f'{self.model_name}_time')
 
-#  TODO move these functions
-
 
 def _get_labels(data: Dataset, model_name: str, best_model_info: dict):
     """
@@ -427,7 +424,7 @@ def plot_cluster_composition(data: Dataset, model_name: str, best_model_info: di
         # TODO print how many datapoints each cluster take?
 
 
-# def prima_questo_loop_sotto(): # TODO 
+# def prima_questo_loop_sotto(): # TODO
 #     # Loop over clusters and visualize images for each cluster
 #     for cluster_id in range(num_clusters):  # Update num_clusters accordingly
 #         cluster_indices = np.where(best_labels == cluster_id)[0]
@@ -466,75 +463,3 @@ def plot_cluster_composition(data: Dataset, model_name: str, best_model_info: di
 #         ax.axis('off')
 #
 #     plt.show()
-
-
-
-
-
-# MEAN SHIFT
-
-class MeanShiftEvaluation(ClusteringModel):
-    """
-    Class for evaluating MeanShift clustering models using combination of
-    PCA dimensions and hyperparameter bandwidth values.
-    """
-    model = "MeanShift"
-    hyperparameter_name = "bandwidth"
-
-    def __init__(self, data: Dataset, n_components: List[int], hyperparam_vals: List[int | float]):
-        """
-        Initialize a MeanShift evaluation instance using SpectralClustering.
-        :param data: The dataset for evaluation.
-        :param n_components: List of PCA dimensions to evaluate.
-        :param hyperparam_vals: List of hyperparameter values to evaluate.
-        """
-        super().__init__(data, n_components, hyperparam_vals)
-        self.hyperparameter = self.hyperparameter_name
-        self.model_name = self.model
-        self.model_type = MeanShift(n_jobs=N_JOBS)
-
-
-# NORMALIZED CUT
-
-class NormalizedCutEvaluation(ClusteringModel):
-    """
-    Class for evaluating NormalizedCut clustering models using combination of
-    PCA dimensions and hyperparameter n_clusters values.
-    """
-    model = "NormalizedCut"
-    hyperparameter_name = "n_clusters"
-
-    def __init__(self, data: Dataset, n_components: List[int], hyperparam_vals: List[int | float]):
-        """
-        Initialize a NormalizedCut evaluation instance using SpectralClustering.
-        :param data: The dataset for evaluation.
-        :param n_components: List of PCA dimensions to evaluate.
-        :param hyperparam_vals: List of hyperparameter values to evaluate.
-        """
-        super().__init__(data, n_components, hyperparam_vals)
-        self.hyperparameter = self.hyperparameter_name
-        self.model_name = self.model
-        self.model_type = SpectralClustering(n_jobs=N_JOBS, random_state=RANDOM_SEED)
-
-
-# MIXTURE GAUSSIAN
-
-class MixtureGaussianEvaluation(ClusteringModel):
-    """
-    Class for evaluating GaussianMixture clustering models using combination of
-    PCA dimensions and hyperparameter n_components values.
-    """
-    model = "GaussianMixture"
-    hyperparameter_name = "n_components"  # refers to number of clusters, not PCA dimension
-
-    def __init__(self, data: Dataset, n_components: List[int], hyperparam_vals: List[int | float]):
-        """
-        Initialize a GaussianMixture evaluation instance.
-        :param data: The dataset for evaluation.
-        :param n_components: List of PCA dimensions to evaluate.
-        :param hyperparam_vals: List of hyperparameter values to evaluate.
-        """
-        super().__init__(data, n_components, hyperparam_vals)
-        self.hyperparameter = self.hyperparameter_name
-        self.model_name = self.model
-        self.model_type = GaussianMixture(max_iter=1000, random_state=RANDOM_SEED)
