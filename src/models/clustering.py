@@ -408,7 +408,7 @@ def plot_cluster_frequencies(data: Dataset, model_name: str, best_model_info: di
     if save:
         if not os.path.exists(get_images_dir()):
             os.mkdir(get_images_dir())
-        file_name = os.path.join(get_images_dir(), f"cluster_frequencies.png")
+        file_name = os.path.join(get_images_dir(), f"{model_name}_cluster_frequencies.png")
         plt.savefig(file_name)
 
     plt.show()
@@ -443,7 +443,7 @@ def plot_cluster_composition(data: Dataset, model_name: str, best_model_info: di
         cluster_df.index.name = "Cluster"
         display(cluster_df)
     else:
-        plt.figure(figsize=(18, 10))
+        plt.figure(figsize=(8, 10))
         sns.heatmap(cluster_probs[:, :10], annot=True, fmt=".3f", cmap='inferno', square=True)
         plt.xlabel('Actual Digit')
         plt.ylabel('Cluster')
@@ -453,7 +453,7 @@ def plot_cluster_composition(data: Dataset, model_name: str, best_model_info: di
         if save:
             if not os.path.exists(get_images_dir()):
                 os.mkdir(get_images_dir())
-            file_path = os.path.join(get_images_dir(), f"cluster_composition.png")
+            file_path = os.path.join(get_images_dir(), f"{model_name}_cluster_composition.png")
             plt.savefig(file_path)
 
         plt.show()
@@ -576,7 +576,7 @@ def plot_model_means(data: Dataset, model_name: str, best_model_info: dict, save
     if save:
         if not os.path.exists(get_images_dir()):
             os.mkdir(get_images_dir())
-        file_path = os.path.join(get_images_dir(), f"cluster_means.png")
+        file_path = os.path.join(get_images_dir(), f"{model_name}_cluster_means.png")
         plt.savefig(file_path)
 
     plt.show()
