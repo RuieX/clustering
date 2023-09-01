@@ -525,5 +525,7 @@ def visualize_model_means(data: Dataset, model_name: str, best_model_info: dict)
     if len(unique_clusters) > num_clusters_to_visualize:
         print("Note: Only showing the first 20 clusters. Rest are not displayed.")
 
-    plt.savefig("cluster_means_visualization.png")  # Save the plot as an image
+    plt.savefig("cluster_means_visualization.png")  # Save the plot as an image TODO save functions on all plot
     plt.show()
+
+# todo documentations and save then delete useless things, and rerun everything, organize index for report then study ADM
