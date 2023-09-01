@@ -17,9 +17,6 @@ from sklearn.cluster import MeanShift, SpectralClustering
 from sklearn.mixture import GaussianMixture
 from sklearn.metrics import rand_score, confusion_matrix
 from sklearn.decomposition import PCA
-from collections import Counter
-from random import sample
-from statistics import mean, mode
 from IPython.display import display
 
 from src.models.dataset import Dataset
@@ -75,7 +72,7 @@ class ClusteringModel(ABC):
 
         for n in tqdm_notebook(self._n_components, desc=''):
             tqdm.write(f'Processing PCA dimension: {n}')
-            data_pca = self.data.make_pca(n_comps=n).rescale()  # applying PCA to dataset
+            data_pca = self.data.reduction_PCA(n_comps=n).normalize()  # applying PCA to dataset
             best_score_lcl = -1
             hyperparameters = {}  # dictionary keyed by hyperparameter value
 
@@ -333,7 +330,7 @@ def _get_labels(data: Dataset, model_name: str, best_model_info: dict):  # todo 
     :return:
     """
     num_components = best_model_info["n_components"]
-    data = data.make_pca(n_comps=num_components).rescale()
+    data = data.reduction_PCA(n_comps=num_components).normalize()
     best_model: ModelType = best_model_info["model"]
 
     match model_name:

@@ -1,32 +1,26 @@
 import os
-from typing import Iterator, List
+from typing import List
 
 import numpy as np
 import pandas as pd
-from numpy import ndarray
-from pandas import DataFrame
 from sklearn.decomposition import PCA
 from sklearn.preprocessing import MinMaxScaler
 
 from src.utilities.utils import get_dataset_dir
 
 
-# DATASET
-# todo documentation, remove useless functions
-
 class Dataset:
     """
-    This class represent a Dataset as a tuple:
-     - feature metrix as a pandas dataframe
-     - label vector as an array
+    Represents a dataset with features and corresponding labels as a tuple of:
+     - feature data as a Pandas DataFrame
+     - labels as a NumPy array
+    The class allows you to create, manipulate, and save datasets.
     """
-
     def __init__(self, x: pd.DataFrame, y: np.ndarray):
         """
-        :param x: feature matrix
-        :param y: label vector
+        :param x: feature data
+        :param y: labels
         """
-
         # data and labels must have the same length
         if len(x) != len(y):
             raise Exception(f"X has length {len(x)}, while y has {len(y)}")
@@ -37,7 +31,7 @@ class Dataset:
     @property
     def x(self) -> pd.DataFrame:
         """
-        :return: feature matrix
+        :return: feature data
         """
         return self._x
 
@@ -55,33 +49,11 @@ class Dataset:
         """
         return list(self.x.columns)
 
-    def __len__(self) -> int:
+    def normalize(self) -> 'Dataset':
         """
-        :return: rows in the feature matrix
-        """
-        return len(self.x)
-
-    def __iter__(self) -> Iterator[DataFrame | ndarray]:
-        """
-        :return: unpacked fields
-        """
-        return iter([self.x, self.y])
-
-    def __str__(self) -> str:
-        """
-        :return: class stringify
-        """
-        return f"[Length: {len(self)}; Features: {len(self.x.columns)}]"
-
-    def __repr__(self) -> str:
-        """
-        :return: class representation
-        """
-        return str(self)
-
-    def rescale(self) -> 'Dataset':
-        """
-        Rescales rows and columns in interval [0, 1]
+        Normalizes the features of a dataset using Min-Max scaling.
+        Scales the features to the range [0, 1] to ensure that all features have similar scales.
+        :return: a new Dataset object with normalized features using Min-Max scaling.
         """
         new_x = pd.DataFrame(MinMaxScaler().fit_transform(self.x), columns=self.features)
         return Dataset(
@@ -89,38 +61,36 @@ class Dataset:
             y=self.y
         )
 
-    def make_pca(self, n_comps: int) -> 'Dataset':
+    def reduction_PCA(self, n_comps: int) -> 'Dataset':
         """
-         reduces the dataset's features to a specified number of components
-        Applies principal component analysis to the feature space
-        :param n_comps: number of components for the reduced output dataset
-            an integrity check is made to check if the required number of components is feasible
-        :return: dataset with reduced number of components
+        Reduces the dimensionality of a dataset to the given number of principal components
+        using Principal Component Analysis (PCA).
+        :param n_comps: number of principal components to retain.
+        it must be a positive integer less than the number of features in the original dataset.
+        :return: a new dataset with reduced dimensionality.
         """
-
-        # integrity checks
         if n_comps < 0:
-            raise Exception("Number of components must be positive")
+            raise Exception(
+                "Number of components must a be positive integer")
 
-        actual_comps = len(self.x.columns)
-        if n_comps >= actual_comps:
-            raise Exception(f"Number of components must be less than the actual number of components{actual_comps}")
+        n_features = len(self.x.columns)
+        if n_comps >= n_features:
+            raise Exception(
+                f"Number of components must be less than the number of features in the original dataset {n_features}")
 
-        # return new object
+        # return new dataset with reduced dimensionality
         return Dataset(
             x=pd.DataFrame(PCA(n_components=n_comps).fit_transform(self.x)),
             y=self.y
         )
 
     # SAVE
-    # todo do i need default str?
-    def save(self, x_name: str = 'dataX', y_name: str = 'datay'):
+    def save(self, x_name: str = 'data_X', y_name: str = 'data_y'):
         """
-        Stores the dataset in datasets directory
+        Stores the dataset in dataset directory
         :param x_name: name of feature file
         :param y_name: name of labels file
         """
-
         if not os.path.exists(get_dataset_dir()):
             os.mkdir(get_dataset_dir())
 
@@ -132,19 +102,3 @@ class Dataset:
 
         print(f"Saving {y_out}")
         pd.DataFrame(self.y).to_csv(y_out, index=False)
-
-# TODO prolly useless since i do it outside this class
-#
-#     def plot_digits(self):
-#         """
-#         Plots all digits in the dataset
-#         """
-#         for i in range(len(self)):
-#             pixels = np.array(self.X.iloc[i])
-#             plot_digit(pixels=pixels)
-#
-#     def plot_mean_digits(self):
-#         """
-#         Plots mean of all digits in the dataset
-#         """
-#         plot_mean_digit(X=self.X)
