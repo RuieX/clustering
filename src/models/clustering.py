@@ -65,14 +65,16 @@ class ClusteringModel(ABC):
         The models with the best score for each PCA dimensions will be stored in self._results_bestmodels.
         The best model overall will be stored in self._best_model.
         """
-        components_results = {}  # dictionaries keyed by PCA dimensions
+        # dictionaries keyed by PCA dimensions
+        components_results = {}
         components_bestmodels = {}
 
-        best_score_glb = -1  # initialize with the lowest rand scores possible
+        # initialize with the lowest rand scores possible
+        best_score_glb = -1
 
         for n in tqdm_notebook(self._n_components, desc=''):
             tqdm.write(f'Processing PCA dimension: {n}')
-            data_pca = self.data.reduction_PCA(n_comps=n).normalize()  # applying PCA to dataset
+            data_pca = self.data.reduction_PCA(n_comps=n).normalize()  # applying PCA reduction to dataset
             best_score_lcl = -1
             hyperparameters = {}  # dictionary keyed by hyperparameter value
 
@@ -148,16 +150,17 @@ class ClusteringModel(ABC):
 
         print(f"Saving {results_name}")
         with open(results_name, 'w') as file:
-            json.dump(self.results(), file)
+            json.dump(self.results, file)
 
         print(f"Saving {results_bestmodel_name}")
         with open(results_bestmodel_name, 'w') as fl:
-            json.dump(self.results_bestmodels(), fl)
+            json.dump(self.results_bestmodels, fl)
 
         print(f"Saving {bestmodel_name}")
         with open(bestmodel_name, 'wb') as f:
-            pickle.dump(self.best_model(), f)
+            pickle.dump(self.best_model, f)
 
+    @property
     def results(self) -> Dict[int, Dict[float, Dict[str, float]]]:
         """
         Get the evaluation results as a dictionary, where the keys are the PCA dimensions.
@@ -169,6 +172,7 @@ class ClusteringModel(ABC):
         self._is_evaluated()
         return self._results
 
+    @property
     def results_bestmodels(self) -> Dict[int, Dict[str, ModelType | float]]:
         """
         Get the best models for each PCA dimension.
@@ -176,6 +180,7 @@ class ClusteringModel(ABC):
         self._is_evaluated()
         return self._results_bestmodels
 
+    @property
     def best_model(self) -> Dict[str, ModelType | float]:
         """
         Get the best model in the evaluation.
@@ -224,8 +229,8 @@ class ClusteringModel(ABC):
         """
         # Switching keys PCA dimensions and hyperparameter for easier access to result of each hyperparameter
         inverted_dict = {
-            k: {k2: v2[k] for k2, v2 in self.results().items()}
-            for k in self.results()[list(self.results().keys())[0]]
+            k: {k2: v2[k] for k2, v2 in self.results.items()}
+            for k in self.results[list(self.results.keys())[0]]
         }
 
         for param, dim in inverted_dict.items():
@@ -244,8 +249,8 @@ class ClusteringModel(ABC):
 
         # Highlight best model for each PCA dimension
         if highlight_best:
-            x2 = [float(n) for n in self.results_bestmodels().keys()]
-            y2 = [res2[result] for res2 in self.results_bestmodels().values()]
+            x2 = [float(n) for n in self.results_bestmodels.keys()]
+            y2 = [res2[result] for res2 in self.results_bestmodels.values()]
             ax.plot(x2, y2, 'o', markersize=12, color='gold', label='Best Model')
 
         # Set the x and y-axis labels
@@ -278,6 +283,7 @@ class ClusteringModel(ABC):
 
         plt.tight_layout()
 
+        # Save the image
         if save:
             if not os.path.exists(get_images_dir()):
                 os.mkdir(get_images_dir())
@@ -324,10 +330,14 @@ class ClusteringModel(ABC):
                                   file_name=f'{self.model_name}_time')
 
 
-def _get_labels(data: Dataset, model_name: str, best_model_info: dict):  # todo description
+def _get_labels(data: Dataset, model_name: str, best_model_info: dict):
     """
-
-    :return:
+    Get cluster labels for the given dataset and specified clustering model.
+    The clustering model and its corresponding parameters are specified based on the given model_name.
+    :param data: dataset
+    :param model_name: name of the clustering model to use (MeanShift, SpectralClustering, GaussianMixture)
+    :param best_model_info: dictionary containing information about the best clustering model
+    :return: cluster labels assigned to the data points
     """
     num_components = best_model_info["n_components"]
     data = data.reduction_PCA(n_comps=num_components).normalize()
@@ -346,38 +356,44 @@ def _get_labels(data: Dataset, model_name: str, best_model_info: dict):  # todo 
     return labels
 
 
-def plot_cluster_frequencies(data: Dataset, model_name: str, best_model_info: dict):
+def plot_cluster_frequencies(data: Dataset, model_name: str, best_model_info: dict, save: bool = False):
     """
-
-    :param data:
-    :param model_name:
-    :param best_model_info:
+    Plot the distribution of cluster frequencies in a dataset.
+    It creates a histogram to display how data points are distributed across each cluster.
+    Display only max_clusters number of clusters.
+    :param data: dataset
+    :param model_name: name of the clustering model
+    :param best_model_info: dictionary containing information about the best clustering model
+    :param save: Whether to save the plots as images.
     :return:
     """
+    # Get cluster labels
     labels = _get_labels(data=data, model_name=model_name, best_model_info=best_model_info)
 
     # Determine the number of unique clusters
     n_clusters = len(set(labels))
     max_clusters = 20
+
     # Sort the labels in descending order
     sorted_labels = sorted(labels, reverse=True)
 
     cmap = plt.cm.get_cmap('tab20')
     plt.figure(figsize=(16, 6))
 
+    # Handle cases: number of clusters more or less than max_clusters
     if n_clusters <= max_clusters:
         for i in range(n_clusters):
             cls_labels = [label for label in labels if label == i]
-            color = i % cmap.N  # Calculate color index using modulo to rotate colors
+            color = i % cmap.N
             plt.hist(cls_labels, bins=[i-0.5 for i in range(n_clusters + 1)], color=cmap(color), label=f'Cluster {i}')
     else:
-        # Plot the highest 49 clusters
+        # Plot the highest max_clusters clusters
         for i in range(max_clusters - 1):
             cls_labels = [label for label in sorted_labels if label == i]
             color = i % cmap.N
             plt.hist(cls_labels, bins=[i - 0.5 for i in range(max_clusters)], color=cmap(color), label=f'Cluster {i}')
 
-        # Plot the "Others" cluster
+        # Plot the remaining cluster
         other_clusters = [label for label in sorted_labels if label >= max_clusters - 1]
         color = (max_clusters - 1) % cmap.N
         plt.hist(other_clusters, bins=[max_clusters-1-0.5, max_clusters-0.5], color=cmap(color), label='Others')
@@ -385,77 +401,100 @@ def plot_cluster_frequencies(data: Dataset, model_name: str, best_model_info: di
     plt.xlabel('Cluster')
     plt.ylabel('Frequency')
     plt.title(f'Cluster Frequencies: {n_clusters} clusters')
-    # Move the legend outside the plot
     plt.legend(bbox_to_anchor=(1.05, 1), loc='upper left')
-    plt.tight_layout()  # Adjust spacing for better layout
+    plt.tight_layout()
+
+    # Save the image
+    if save:
+        if not os.path.exists(get_images_dir()):
+            os.mkdir(get_images_dir())
+        file_name = os.path.join(get_images_dir(), f"cluster_frequencies.png")
+        plt.savefig(file_name)
+
     plt.show()
 
 
-def plot_cluster_composition(data: Dataset, model_name: str, best_model_info: dict):
+def plot_cluster_composition(data: Dataset, model_name: str, best_model_info: dict, save: bool = False):
     """
-    You'll need to compare the cluster assignments with the actual digit labels to perform a composition analysis.
-    You can create a confusion matrix to see how well the clusters match with the actual digits.
-
-    You can analyze the rows of the confusion matrix to identify which digit each cluster recognizes best.
-    The index with the highest count in each row corresponds to the digit that the cluster seems to recognize best.
+    Plot the composition of clusters in terms of actual digit labels.
+    Calculates and displays cluster composition analysis, including probabilities of clusters assigned to each digit.
+    Note: the percentage for a cluster to be considered correctly able to recognise a digit is set to 50%
+    :param data: dataset
+    :param model_name: name of the clustering model
+    :param best_model_info: dictionary containing information about the best clustering model
+    :param save: Whether to save the plots as images.
     :return:
     """
+    # Get cluster labels and actual labels
     best_labels = _get_labels(data=data, model_name=model_name, best_model_info=best_model_info)
-    actual_labels = data.y  # Assuming data_pca.y are the true digit labels
+    actual_labels = data.y
+
+    # Calculate the confusion matrix
     confusion = confusion_matrix(best_labels, actual_labels)
-
     # Normalize the confusion matrix to get probabilities
-    cluster_probabilities = confusion / confusion.sum(axis=1, keepdims=True)
+    cluster_probs = confusion / confusion.sum(axis=1, keepdims=True)
 
+    # Display cluster-to-digit probabilities in a DataFrame if MeanShift model
+    # Otherwise, plot a heatmap
     if model_name == "MeanShift":
-        cluster_df = pd.DataFrame(cluster_probabilities[:, :10])
+        cluster_df = pd.DataFrame(cluster_probs[:, :10])
         cluster_df = cluster_df.applymap(lambda x: f'{x:.3f}')
         cluster_df.columns = [f'Digit {i}' for i in range(0, 10)]
         cluster_df.index.name = "Cluster"
         display(cluster_df)
     else:
         plt.figure(figsize=(18, 10))
-        sns.heatmap(cluster_probabilities[:, :10], annot=True, fmt=".3f", cmap='inferno', square=True)
+        sns.heatmap(cluster_probs[:, :10], annot=True, fmt=".3f", cmap='inferno', square=True)
         plt.xlabel('Actual Digit')
         plt.ylabel('Cluster')
         plt.title('Cluster Composition Analysis (Probabilities)')
+
+        # Save the image
+        if save:
+            if not os.path.exists(get_images_dir()):
+                os.mkdir(get_images_dir())
+            file_path = os.path.join(get_images_dir(), f"cluster_composition.png")
+            plt.savefig(file_path)
+
         plt.show()
 
     # Calculate percentage of clusters focused on each digit (0 to 9)
-    digit_focus = (cluster_probabilities[:, :10] >= 0.5).mean(axis=0) * 100  # set to 50%
-    underperforming_percentage = 100 - digit_focus.sum()
+    digit_focus = (cluster_probs[:, :10] >= 0.5).mean(axis=0) * 100  # set to 50%
+    underperforming_pct = 100 - digit_focus.sum()
 
     print("Percentage of clusters focused on each digit:")
-    for digit, percentage in enumerate(digit_focus):
-        print(f"For digit {digit}: {percentage:.3f}%")
+    for digit, pct in enumerate(digit_focus):
+        print(f"For digit {digit}: {pct:.3f}%")
 
-    print(f"Clusters underperforming (distributed across multiple digits): {underperforming_percentage:.3f}%")
+    print(f"Underperforming Clusters (distributed across multiple digits): {underperforming_pct:.3f}%")
 
 
 def plot_reconstructed_images(data: Dataset, model_name: str, best_model_info: dict):
     """
-    you can visualize the reconstructed images by using the original data points that belong to each cluster.
-    you can find the data points that belong to a specific cluster using the cluster labels obtained from the best model.
-    Then, you can use PCA's inverse transform to obtain the original data points in the original feature space and display them.
+    Plot some reconstructed images for each cluster using the original data points in each cluster.
+    :param data: dataset
+    :param model_name: name of the clustering model
+    :param best_model_info: dictionary containing information about the best clustering model
     :return:
     """
+    # Get cluster labels
     best_labels = _get_labels(data=data, model_name=model_name, best_model_info=best_model_info)
 
-    # Assuming data.x is your original dataset
+    # Fit and reduce dataset dimensionality using PCA with the specified number of components on the original data
     pca = PCA(n_components=best_model_info['n_components'])
     pca.fit(data.x)
-    data_pca = pca.transform(data.x)  # Use transform instead of fit_transform
+    data_pca = pca.transform(data.x)
 
-    unique_clusters = np.unique(best_labels)
-
-    max_clusters_to_visualize = 20  # Set the maximum number of clusters to visualize
+    unique_clusters = np.unique(best_labels)  # Get unique clusters
+    max_clusters = 20  # Set the maximum number of clusters to visualize
 
     # Loop over clusters and visualize images for each cluster
     for idx, cluster_id in enumerate(unique_clusters):
-        if idx >= max_clusters_to_visualize:
+        if idx >= max_clusters:
             print(f"Cluster visualization limit reached. Remaining clusters won't be displayed.")
             break
 
+        # Find the indices of data points belonging to the current cluster
         cluster_indices = np.where(best_labels == cluster_id)[0]
         cluster_data = data_pca[cluster_indices]  # Extract original data points
 
@@ -478,32 +517,43 @@ def plot_reconstructed_images(data: Dataset, model_name: str, best_model_info: d
         plt.show()
 
 
-def visualize_model_means(data: Dataset, model_name: str, best_model_info: dict):
+def plot_model_means(data: Dataset, model_name: str, best_model_info: dict, save: bool = False):
+    """
+    Plot the mean of each cluster in the dataset using PCA.
+    :param data: dataset
+    :param model_name: name of the clustering model
+    :param best_model_info: dictionary containing information about the best clustering model
+    :param save: Whether to save the plots as images.
+    :return:
+    """
+    # Get cluster labels using the best model
     best_labels = _get_labels(data=data, model_name=model_name, best_model_info=best_model_info)
 
-    # Assuming data.x is your original dataset
+    # Fit and reduce dataset dimensionality using PCA with the specified number of components on the original data
     pca = PCA(n_components=best_model_info['n_components'])
     pca.fit(data.x)
-    data_pca = pca.transform(data.x)  # Use transform instead of fit_transform
+    data_pca = pca.transform(data.x)
 
-    unique_clusters = np.unique(best_labels)
-    num_clusters_to_visualize = min(20, len(unique_clusters))  # Limit to 20 or the number of clusters
+    unique_clusters = np.unique(best_labels)  # Get unique clusters
+    num_clusters_to_plot = min(20, len(unique_clusters))  # Limit to 20 or the number of clusters
+    num_images_per_row = 3  # Number of cluster means to display in each row of subplots
 
-    num_images_per_row = 3
+    # Calculate the number of rows for and create subplot layout
+    rows, cols = (num_clusters_to_plot + (num_images_per_row - 1)) // num_images_per_row, num_images_per_row
+    fig, axes = plt.subplots(rows, cols, figsize=(15, 5 * rows))
 
-    # Calculate the number of rows for subplot layout
-    rows, cols = (num_clusters_to_visualize + (num_images_per_row - 1)) // num_images_per_row, num_images_per_row
-    fig, axes = plt.subplots(rows, cols, figsize=(15, 5 * rows))  # Create subplots layout
-
-    for idx, cluster_id in enumerate(unique_clusters[:num_clusters_to_visualize]):
+    for idx, cluster_id in enumerate(unique_clusters[:num_clusters_to_plot]):
         row = idx // num_images_per_row
         col = idx % num_images_per_row
 
+        # Find the indices of data points belonging to the current cluster
         cluster_indices = np.where(best_labels == cluster_id)[0]
         cluster_data_pca = data_pca[cluster_indices]  # Extract transformed data points
 
+        # Calculate the mean of the cluster in the PCA space
         cluster_mean = np.mean(cluster_data_pca, axis=0)
 
+        # Inverse transform the cluster mean to the original data space
         reconstructed_mean = pca.inverse_transform(cluster_mean)
 
         ax = axes[row, col] if rows > 1 else axes[col]
@@ -517,12 +567,16 @@ def visualize_model_means(data: Dataset, model_name: str, best_model_info: dict)
         col = idx % num_images_per_row
         axes[row, col].axis('off')
 
-    plt.tight_layout()
-
-    if len(unique_clusters) > num_clusters_to_visualize:
+    if len(unique_clusters) > num_clusters_to_plot:
         print("Note: Only showing the first 20 clusters. Rest are not displayed.")
 
-    plt.savefig("cluster_means_visualization.png")  # Save the plot as an image TODO save functions on all plot
-    plt.show()
+    plt.tight_layout()
 
-# todo documentations and save then delete useless things, and rerun everything, organize index for report then study ADM
+    # Save the image
+    if save:
+        if not os.path.exists(get_images_dir()):
+            os.mkdir(get_images_dir())
+        file_path = os.path.join(get_images_dir(), f"cluster_means.png")
+        plt.savefig(file_path)
+
+    plt.show()
