@@ -3,6 +3,5 @@ pandas
 seaborn
 scikit-learn
 matplotlib
-loguru
-joblib
-#TODO check library
+json
+pickle

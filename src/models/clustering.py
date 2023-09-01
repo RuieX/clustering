@@ -540,7 +540,7 @@ def plot_model_means(data: Dataset, model_name: str, best_model_info: dict, save
 
     # Calculate the number of rows for and create subplot layout
     rows, cols = (num_clusters_to_plot + (num_images_per_row - 1)) // num_images_per_row, num_images_per_row
-    fig, axes = plt.subplots(rows, cols, figsize=(15, 5 * rows))
+    fig, axes = plt.subplots(rows, cols, figsize=(10, 3 * rows))
 
     for idx, cluster_id in enumerate(unique_clusters[:num_clusters_to_plot]):
         row = idx // num_images_per_row
