@@ -418,7 +418,7 @@ def plot_cluster_composition(data: Dataset, model_name: str, best_model_info: di
         display(cluster_df)
     else:
         plt.figure(figsize=(18, 10))
-        sns.heatmap(cluster_probabilities[:, :10], annot=True, fmt=".3f", cmap='Blues', square=True)
+        sns.heatmap(cluster_probabilities[:, :10], annot=True, fmt=".3f", cmap='inferno', square=True)
         plt.xlabel('Actual Digit')
         plt.ylabel('Cluster')
         plt.title('Cluster Composition Analysis (Probabilities)')
@@ -463,7 +463,7 @@ def plot_reconstructed_images(data: Dataset, model_name: str, best_model_info: d
         cluster_data = data_pca[cluster_indices]  # Extract original data points
 
         # Select a random subset of data points to display
-        n_images_to_display = min(5, len(cluster_data))  # Limit to the number of available images
+        n_images_to_display = min(3, len(cluster_data))  # Limit to the number of available images
         random_indexes = random.sample(range(len(cluster_data)), n_images_to_display)
         random_data = cluster_data[random_indexes]
 
@@ -474,7 +474,7 @@ def plot_reconstructed_images(data: Dataset, model_name: str, best_model_info: d
         fig, axes = plt.subplots(1, n_images_to_display, figsize=(10, 2))
 
         for i, ax in enumerate(axes):
-            ax.imshow(random_original_data_points[i].reshape(28, 28), cmap='gray')
+            ax.imshow(random_original_data_points[i].reshape(28, 28), cmap='plasma')
             ax.axis('off')
 
         plt.suptitle(f"Cluster {cluster_id}", fontsize=16)
@@ -490,20 +490,40 @@ def visualize_model_means(data: Dataset, model_name: str, best_model_info: dict)
     data_pca = pca.transform(data.x)  # Use transform instead of fit_transform
 
     unique_clusters = np.unique(best_labels)
+    num_clusters_to_visualize = min(20, len(unique_clusters))  # Limit to 20 or the number of clusters
 
-    for cluster_id in unique_clusters:
+    num_images_per_row = 3
+
+    # Calculate the number of rows for subplot layout
+    rows, cols = (num_clusters_to_visualize + (num_images_per_row - 1)) // num_images_per_row, num_images_per_row
+    fig, axes = plt.subplots(rows, cols, figsize=(15, 5 * rows))  # Create subplots layout
+
+    for idx, cluster_id in enumerate(unique_clusters[:num_clusters_to_visualize]):
+        row = idx // num_images_per_row
+        col = idx % num_images_per_row
+
         cluster_indices = np.where(best_labels == cluster_id)[0]
         cluster_data_pca = data_pca[cluster_indices]  # Extract transformed data points
 
-        # Calculate the mean of transformed data points for the current cluster
         cluster_mean = np.mean(cluster_data_pca, axis=0)
 
-        # Perform PCA inverse transform on the mean to get the reconstructed mean
         reconstructed_mean = pca.inverse_transform(cluster_mean)
 
-        # Visualize the reconstructed mean as a grayscale image
-        plt.figure(figsize=(4, 4))
-        plt.imshow(reconstructed_mean.reshape(28, 28), cmap='gray')
-        plt.title(f"Cluster {cluster_id} Mean")
-        plt.axis('off')
-        plt.show()
+        ax = axes[row, col] if rows > 1 else axes[col]
+        ax.imshow(reconstructed_mean.reshape(28, 28), cmap='viridis')
+        ax.set_title(f"Cluster {cluster_id} Mean")
+        ax.axis('off')
+
+    # Hide any remaining empty subplots
+    for idx in range(len(unique_clusters), rows * num_images_per_row):
+        row = idx // num_images_per_row
+        col = idx % num_images_per_row
+        axes[row, col].axis('off')
+
+    plt.tight_layout()
+
+    if len(unique_clusters) > num_clusters_to_visualize:
+        print("Note: Only showing the first 20 clusters. Rest are not displayed.")
+
+    plt.savefig("cluster_means_visualization.png")  # Save the plot as an image
+    plt.show()
